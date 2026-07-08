@@ -38,6 +38,6 @@ public struct MediaProbe {
             throw CompressError.probeFailed("unparseable ffprobe output")
         }
         let size = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int64 ?? 0
-        return MediaInfo(duration: duration, width: w, height: h, sizeBytes: size ?? 0)
+        return MediaInfo(duration: duration, width: w, height: h, sizeBytes: size)
     }
 }
