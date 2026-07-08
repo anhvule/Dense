@@ -61,7 +61,7 @@ Four components:
 **4. Distribution & site**
 - Developer ID signed, notarized DMG.
 - Sparkle framework for auto-updates (appcast hosted with the site).
-- Static landing page (Astro or plain HTML on Cloudflare Pages): hero demo, before/after examples, Lemon Squeezy checkout, email-capture waitlist form.
+- Static landing page (plain HTML/CSS on Cloudflare Pages — no framework needed for one page): hero demo, before/after examples, Lemon Squeezy checkout, email-capture waitlist form.
 - FFmpeg licensing compliance: invoked as a separate process; source link/offer provided per LGPL/GPL terms (standard indie practice).
 
 ### Error handling
@@ -96,7 +96,7 @@ With zero audience and <$500, the product demo is the marketing: before/after co
 ### Week 1 — Foundation (days 1–7)
 
 - Pick product name, buy domain (~$10).
-- Ship one-page landing site: hero demo GIF, waitlist email capture with "35% launch discount" incentive (Buttondown or Lemon Squeezy email, free tier).
+- Ship one-page landing site: hero demo GIF, waitlist email capture with "35% launch discount" incentive (Buttondown free tier for the waitlist; it migrates cleanly to launch emails).
 - Create X/Twitter and TikTok accounts. First build-in-public post day 1.
 - Cadence from day 1: one X post daily; 2–3 short vertical videos/week cross-posted to TikTok, Reels, Shorts.
 - Content pillars: (a) before/after demos — the hero format; (b) dev-log moments; (c) relatable file-size pain content.
