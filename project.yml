@@ -1,0 +1,22 @@
+# project.yml
+name: Compress
+options:
+  bundleIdPrefix: app.compress
+packages:
+  CompressCore:
+    path: CompressCore
+targets:
+  Compress:
+    type: application
+    platform: macOS
+    deploymentTarget: "13.0"
+    sources: [App]
+    dependencies:
+      - package: CompressCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.compress.mac
+        MARKETING_VERSION: "0.1.0"
+        ARCHS: "arm64 x86_64"
+        ONLY_ACTIVE_ARCH: "NO"
+        INFOPLIST_FILE: App/Info.plist
