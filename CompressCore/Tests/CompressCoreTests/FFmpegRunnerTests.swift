@@ -27,4 +27,12 @@ final class FFmpegRunnerTests: XCTestCase {
         }
         XCTAssertTrue(sawBanner) // ffmpeg prints its banner to stderr
     }
+
+    func testRunCapturingStdoutCapturesVersionBanner() async throws {
+        let runner = FFmpegRunner(binaryURL: try ffmpegURL())
+        let (code, stdout) = try await runner.runCapturingStdout(arguments: ["-version"])
+        XCTAssertEqual(code, 0)
+        let text = try XCTUnwrap(String(data: stdout, encoding: .utf8))
+        XCTAssertTrue(text.contains("ffmpeg version"))
+    }
 }
