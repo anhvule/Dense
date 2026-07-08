@@ -1,5 +1,7 @@
 Tools/bin/
 build/
+.build/
+.swiftpm/
 DerivedData/
 *.xcodeproj
 .DS_Store
