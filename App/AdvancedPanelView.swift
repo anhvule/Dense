@@ -82,6 +82,6 @@ struct AdvancedPanelView: View {
     private func pickFolder() {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true; panel.canChooseFiles = false
-        if panel.runModal() == .OK, let url = panel.url { env.customOutputPath = url.path }
+        if panel.runModal() == .OK, let url = panel.url { env.setCustomOutputPath(url.path) }
     }
 }

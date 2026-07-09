@@ -71,9 +71,10 @@ struct MainView: View {
         let done = queue.jobs.compactMap { if case .done(let r) = $0.status { return r } else { return nil } }
         let inB = done.reduce(Int64(0)) { $0 + $1.inputBytes }
         let outB = done.reduce(Int64(0)) { $0 + $1.outputBytes }
-        guard inB > 0 else { return "\(queue.jobs.count) file\(queue.jobs.count == 1 ? "" : "s")" }
+        let saved = inB - outB
+        guard inB > 0, saved > 0 else { return "\(queue.jobs.count) file\(queue.jobs.count == 1 ? "" : "s")" }
         let pct = Int((1 - Double(outB) / Double(inB)) * 100)
-        return "\(queue.jobs.count) files · saved \(ByteCountFormatter.string(fromByteCount: inB - outB, countStyle: .file)) (−\(pct)%)"
+        return "\(queue.jobs.count) files · saved \(ByteCountFormatter.string(fromByteCount: saved, countStyle: .file)) (−\(pct)%)"
     }
 
     /// Loads dropped file URLs from NSItemProviders. The async bridge for

@@ -33,7 +33,8 @@ final class AppEnvironment: ObservableObject {
         opts.container = containerRaw == "mov" ? .mov : .mp4
         opts.removeAudio = removeAudio
         opts.resolutionCap = ResolutionCap(rawValue: resolutionCapRaw)
-        opts.customTargetMB = Double(customTargetMBText)
+        opts.customTargetMB = Double(customTargetMBText.replacingOccurrences(of: ",", with: "."))
+            .flatMap { $0 > 0 ? $0 : nil }
         opts.outputSuffix = outputSuffix.isEmpty ? "-compressed" : outputSuffix
         return opts
     }
@@ -44,6 +45,15 @@ final class AppEnvironment: ObservableObject {
     }
 
     var gifOptions: GIFOptions { GIFOptions(fps: gifFps, maxWidth: gifWidth) }
+
+    /// @AppStorage on a plain ObservableObject doesn't publish changes, so
+    /// views reading `customOutputPath` wouldn't refresh after the folder
+    /// picker writes it. Route writes through here so the state owner emits
+    /// objectWillChange first.
+    func setCustomOutputPath(_ path: String) {
+        objectWillChange.send()
+        customOutputPath = path
+    }
 
     init() {
         guard let ffmpeg = FFmpegRunner.locateTool(named: "ffmpeg"),
