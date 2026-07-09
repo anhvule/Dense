@@ -24,6 +24,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.compress.mac
         MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
         ARCHS: "arm64 x86_64"
         ONLY_ACTIVE_ARCH: "NO"
         INFOPLIST_FILE: App/Info.plist
@@ -34,8 +35,9 @@ targets:
       properties:
         CFBundleDisplayName: Compress
         CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSMinimumSystemVersion: "13.0"
-        NSHumanReadableCopyright: Uses FFmpeg (ffmpeg.org) under the (L)GPL, run as a separate process.
+        NSHumanReadableCopyright: "Uses FFmpeg (ffmpeg.org) under the GPL, run as a separate process. Source: see website."
         SUFeedURL: https://REPLACE-AT-LAUNCH.example/appcast.xml
         SUPublicEDKey: REPLACE-AT-LAUNCH-EDKEY
         SUEnableAutomaticChecks: true

@@ -19,11 +19,11 @@
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>Uses FFmpeg (ffmpeg.org) under the (L)GPL, run as a separate process.</string>
+	<string>Uses FFmpeg (ffmpeg.org) under the GPL, run as a separate process. Source: see website.</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUFeedURL</key>

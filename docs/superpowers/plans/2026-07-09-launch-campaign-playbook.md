@@ -50,6 +50,7 @@ Companion to `2026-07-09-video-compressor-app.md` (the build plan). This is oper
 - [ ] **Day 19:** Book the newsletter sponsorship (~$300) for launch week. Pick by audience fit — a Mac-apps newsletter (e.g. MacMenuBar-style roundups) or a creator-economy newsletter. Confirm the send date lands **on or 1 day after** PH launch day.
 - [ ] **Day 20:** Schedule the launch: PH launch set for Tuesday 12:01 AM PT. Line up 5–10 friends/beta users who genuinely use the product to be awake for early comments (PH penalizes vote-begging; asking real users to share honest feedback is fine).
 - [ ] **Day 21:** Freeze: `Scripts/release.sh 1.0.0`, final notarized DMG, `grep -r REPLACE-AT-LAUNCH` returns nothing, appcast live, checkout link tested with a real card, refund policy page up. Weekly recap post. Checkpoint: **waitlist ≥ 300.**
+  - [ ] FFmpeg GPL source links live on the site (source-offer obligation for the bundled GPL build).
 
 **Exit criteria:** shippable 1.0.0 DMG, working checkout, ≥3 testimonials on site, all PH assets done, newsletter booked.
 

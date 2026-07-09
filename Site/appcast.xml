@@ -5,6 +5,7 @@
     <title>Compress Updates</title>
     <item>
       <title>1.0.0</title>
+      <!-- sparkle:version must equal the app's CURRENT_PROJECT_VERSION build number -->
       <sparkle:version>1</sparkle:version>
       <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>

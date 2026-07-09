@@ -1,13 +1,15 @@
 #!/bin/bash
-# Scripts/release.sh <version> — archive, sign, notarize, staple, dmg, appcast entry
+# Scripts/release.sh <version> [build] — archive, sign, notarize, staple, dmg, appcast entry
 set -euo pipefail
-VERSION="${1:?usage: release.sh 1.0.0}"
+VERSION="${1:?usage: release.sh 1.0.0 [build]}"
+BUILD="${2:-$(git rev-list --count HEAD)}"
 IDENTITY="Developer ID Application"   # picks up the cert by prefix
 cd "$(dirname "$0")/.."
 
 xcodegen generate
 xcodebuild -project Compress.xcodeproj -scheme Compress -configuration Release \
-  MARKETING_VERSION="$VERSION" -derivedDataPath build/dd -destination "generic/platform=macOS" \
+  MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD" -derivedDataPath build/dd \
+  -destination "generic/platform=macOS" \
   archive -archivePath build/Compress.xcarchive
 APP="build/Compress.xcarchive/Products/Applications/Compress.app"
 
@@ -57,7 +59,7 @@ SIGN_UPDATE=$(find build/dd/SourcePackages -type f -name sign_update -perm +111 
 [ -n "$SIGN_UPDATE" ] || { echo "ERROR: sign_update not found under build/dd/SourcePackages — check Sparkle artifacts" >&2; exit 1; }
 SIGNATURE=$("$SIGN_UPDATE" "build/Compress-$VERSION.dmg")
 echo "appcast enclosure attrs: $SIGNATURE"
-echo "DONE: build/Compress-$VERSION.dmg"
+echo "DONE: build/Compress-$VERSION.dmg (version $VERSION, build $BUILD)"
 
 # -----------------------------------------------------------------------------
 # Docs: one-time setup required before this script can run end-to-end.
@@ -113,4 +115,22 @@ echo "DONE: build/Compress-$VERSION.dmg"
 # unattended through archive, codesign, notarization ("status: Accepted"),
 # stapling, and print the sign_update output to paste into
 # Site/appcast.xml's sparkle:edSignature attribute for that release.
+#
+# 5. Build number (CFBundleVersion / CURRENT_PROJECT_VERSION):
+#    - This script takes an optional second BUILD argument
+#      (`./Scripts/release.sh 1.0.0 42`); if omitted it derives BUILD as
+#      `git rev-list --count HEAD`, which is monotonically increasing as long
+#      as releases are cut from commits with strictly increasing history —
+#      Sparkle only compares CFBundleVersion numerically/lexicographically
+#      to decide whether an update is newer, and Apple/Sparkle both require
+#      it to strictly increase release over release (MARKETING_VERSION, the
+#      user-facing "1.0.0" string, is not what Sparkle uses for that check).
+#    - Every release's Site/appcast.xml entry MUST set <sparkle:version> to
+#      this exact same build number (the "DONE:" line above echoes it) —
+#      if the appcast's sparkle:version doesn't match (or isn't bumped from
+#      the previous release), Sparkle will not offer the update, or worse,
+#      will offer/skip updates incorrectly.
+#    - Bumping only MARKETING_VERSION and leaving CURRENT_PROJECT_VERSION
+#      unchanged is the single most common way to silently break updates —
+#      always bump the build number every release, even for patch releases.
 # -----------------------------------------------------------------------------
