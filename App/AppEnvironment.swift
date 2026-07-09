@@ -21,6 +21,7 @@ final class AppEnvironment: ObservableObject {
     @AppStorage("gifFps") var gifFps: Int = 12
     @AppStorage("gifWidth") var gifWidth: Int = 480
     @AppStorage("imageQuality") var imageQuality: Double = 0.75
+    @AppStorage("pdfQualityRaw") var pdfQualityRaw: String = PDFQuality.balanced.rawValue
     @AppStorage("didMigrateHEVCToContainer") private var didMigrateHEVCToContainer: Bool = false
 
     var defaultPreset: Preset {
@@ -47,6 +48,10 @@ final class AppEnvironment: ObservableObject {
 
     var gifOptions: GIFOptions { GIFOptions(fps: gifFps, maxWidth: gifWidth) }
     var imageOptions: ImageOptions { ImageOptions(quality: imageQuality) }
+    var pdfQuality: PDFQuality {
+        get { PDFQuality(rawValue: pdfQualityRaw) ?? .balanced }
+        set { pdfQualityRaw = newValue.rawValue }
+    }
 
     /// @AppStorage on a plain ObservableObject doesn't publish changes, so
     /// views reading `customOutputPath` wouldn't refresh after the folder
@@ -65,7 +70,8 @@ final class AppEnvironment: ObservableObject {
         queue = JobQueue(compressor: VideoCompressor(ffmpegURL: ffmpeg, ffprobeURL: ffprobe),
                          gifConverter: GIFConverter(ffmpegURL: ffmpeg, ffprobeURL: ffprobe),
                          imageCompressor: ImageCompressor(ffmpegURL: ffmpeg),
-                         audioExtractor: AudioExtractor(ffmpegURL: ffmpeg, ffprobeURL: ffprobe))
+                         audioExtractor: AudioExtractor(ffmpegURL: ffmpeg, ffprobeURL: ffprobe),
+                         pdfCompressor: PDFCompressor())
         licenseStatus = licenseState.status()
         // One-time migration: fold the legacy standalone HEVC toggle into the
         // new container picker so users who had it on don't silently lose it.
@@ -92,17 +98,19 @@ final class AppEnvironment: ObservableObject {
         // Expand folders one level, route each file by FileKind. Video goes
         // through the existing compress/GIF path; images get their own job
         // kind; dropped .gif files are optimized in place (the gifMode
-        // toggle only affects video inputs, not gifs); PDF and anything else
-        // count as rejected for now (F4 will route .pdf to its own path).
+        // toggle only affects video inputs, not gifs); PDFs get their own
+        // Quartz-based job kind; anything else is rejected.
         var videos: [URL] = []
         var images: [URL] = []
         var gifs: [URL] = []
+        var pdfs: [URL] = []
         func classify(_ url: URL) {
             switch FileKind.of(url) {
             case .video: videos.append(url)
             case .image: images.append(url)
             case .gif: gifs.append(url)
-            case .pdf, .unsupported: break
+            case .pdf: pdfs.append(url)
+            case .unsupported: break
             }
         }
         for url in urls {
@@ -130,7 +138,11 @@ final class AppEnvironment: ObservableObject {
             queue.add(urls: gifs, kind: .optimizeGif, options: effective,
                       outputDir: outputDir, gifOptions: gifOptions, trashOriginalOnSuccess: trashOriginals)
         }
-        return videos.count + images.count + gifs.count
+        if !pdfs.isEmpty {
+            queue.add(urls: pdfs, kind: .pdf, options: effective,
+                      outputDir: outputDir, pdfQuality: pdfQuality, trashOriginalOnSuccess: trashOriginals)
+        }
+        return videos.count + images.count + gifs.count + pdfs.count
     }
 
     func handleDrop(urls: [URL]) -> Int { handleDrop(urls: urls, preset: nil) }

@@ -1,4 +1,6 @@
 import XCTest
+import CoreGraphics
+import ImageIO
 @testable import DenseCore
 
 @MainActor
@@ -20,6 +22,24 @@ final class JobQueueTests: XCTestCase {
         }
         fatalError("fixture missing")
     }
+    /// 3 pages of the 1600x1200 photo.jpg fixture drawn full-page — an
+    /// image-heavy PDF that exercises the .pdf job kind end to end.
+    func makeImageHeavyPDF() throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("t-queue-image-heavy-\(UUID().uuidString).pdf")
+        let source = try XCTUnwrap(CGImageSourceCreateWithURL(fixtureURL("photo.jpg") as CFURL, nil))
+        let image = try XCTUnwrap(CGImageSourceCreateImageAtIndex(source, 0, nil))
+        var mediaBox = CGRect(x: 0, y: 0, width: 612, height: 792)
+        let ctx = try XCTUnwrap(CGContext(url as CFURL, mediaBox: &mediaBox, nil))
+        for _ in 0..<3 {
+            ctx.beginPDFPage(nil)
+            ctx.draw(image, in: mediaBox)
+            ctx.endPDFPage()
+        }
+        ctx.closePDF()
+        return url
+    }
+
     func waitUntilIdle(_ queue: JobQueue, timeout: TimeInterval = 120) async {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
@@ -144,6 +164,37 @@ final class JobQueueTests: XCTestCase {
         }
         XCTAssertEqual(result.outputURL.pathExtension, "gif")
         XCTAssertLessThan(result.outputBytes, result.inputBytes)
+    }
+
+    func testPDFJobRunsThroughQueue() async throws {
+        let queue = try makeQueue()
+        let input = try makeImageHeavyPDF()
+        defer { try? FileManager.default.removeItem(at: input) }
+        queue.add(urls: [input], kind: .pdf, options: .init(preset: .balanced),
+                  outputDir: FileManager.default.temporaryDirectory, pdfQuality: .balanced)
+        await waitUntilIdle(queue)
+        guard case .done(let result) = queue.jobs[0].status else {
+            XCTFail("expected done, got \(queue.jobs[0].status)"); return
+        }
+        XCTAssertEqual(result.outputURL.pathExtension, "pdf")
+        XCTAssertLessThan(result.outputBytes, result.inputBytes)
+    }
+
+    /// PDFs are replacement-type outputs too — trash-on-success applies.
+    @MainActor
+    func testTrashOriginalOnSuccessForPDFJob() async throws {
+        let queue = try makeQueue()
+        let source = try makeImageHeavyPDF()
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("trash-me-\(UUID().uuidString).pdf")
+        try FileManager.default.copyItem(at: source, to: tmp)
+        try? FileManager.default.removeItem(at: source)
+        queue.add(urls: [tmp], kind: .pdf, options: .init(preset: .balanced),
+                  outputDir: FileManager.default.temporaryDirectory, pdfQuality: .balanced, trashOriginalOnSuccess: true)
+        await waitUntilIdle(queue)
+        if case .done = queue.jobs[0].status {} else {
+            XCTFail("expected done, got \(queue.jobs[0].status)")
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: tmp.path), "original should be in Trash")
     }
 
     func testExtractAudioJobRunsThroughQueue() async throws {

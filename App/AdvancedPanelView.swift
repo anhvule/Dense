@@ -70,6 +70,10 @@ struct AdvancedPanelView: View {
                     Text("Balanced").tag(0.75)
                     Text("Small").tag(0.55)
                 }.labelsHidden().frame(width: 150)
+                label("PDF quality", systemImage: "doc.richtext")
+                Picker("", selection: $env.pdfQualityRaw) {
+                    ForEach(PDFQuality.allCases) { Text($0.displayName).tag($0.rawValue) }
+                }.labelsHidden().frame(width: 150)
             }
         }
         .padding(14)
