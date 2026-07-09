@@ -50,4 +50,62 @@ public struct GIFConverter {
         progress(1.0)
         return CompressionResult(outputURL: output, inputBytes: info.sizeBytes, outputBytes: outBytes)
     }
+
+    /// Re-palettizes an existing gif (or any ffmpeg-decodable clip) through
+    /// the same two-pass palettegen/paletteuse pipeline as `convert`, but
+    /// without forcing `options.fps` — an already-timed gif shouldn't have
+    /// its frame rate changed just because we're shrinking it. Scaling is
+    /// only applied when the source is wider than `options.maxWidth`, so a
+    /// gif already at or under the target width passes through untouched
+    /// resolution-wise (and a gif with no room left to shrink correctly
+    /// surfaces as `.outputNotSmaller`, matching VideoCompressor).
+    public func optimize(input: URL, options: GIFOptions, outputDir: URL? = nil, suffix: String,
+                         progress: @escaping (Double) -> Void) async throws -> CompressionResult {
+        let info = try await probe.probe(url: input)
+        let dir = outputDir ?? input.deletingLastPathComponent()
+        let stem = input.deletingPathExtension().lastPathComponent
+        let output = dir.appendingPathComponent("\(stem)\(suffix).gif")
+        guard output.standardizedFileURL != input.standardizedFileURL else {
+            throw CompressError.ffmpegFailed(exitCode: -1,
+                lastLine: "Output would overwrite the original — change the suffix or output folder")
+        }
+        let palette = FileManager.default.temporaryDirectory
+            .appendingPathComponent("palette-\(UUID().uuidString).png")
+        defer { try? FileManager.default.removeItem(at: palette) }
+
+        let needsScale = info.width > options.maxWidth
+        let scale = "scale='min(\(options.maxWidth),iw)':-1:flags=lanczos"
+        let paletteFilter = needsScale ? "\(scale),palettegen=stats_mode=diff" : "palettegen=stats_mode=diff"
+        let useFilter = needsScale
+            ? "\(scale)[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=3"
+            : "[0:v][1:v]paletteuse=dither=bayer:bayer_scale=3"
+
+        var lastLine = ""
+        // Pass 1: palette (counts as first half of progress)
+        let code1 = try await ffmpeg.run(arguments:
+            ["-y", "-i", input.path, "-vf", paletteFilter, palette.path]) { line in
+            lastLine = line
+            if let f = ProgressParser.fraction(fromLine: line, duration: info.duration) { progress(f * 0.5) }
+        }
+        guard code1 == 0 else {
+            throw CompressError.ffmpegFailed(exitCode: code1, lastLine: lastLine.isEmpty ? "palettegen failed" : lastLine)
+        }
+        // Pass 2: encode
+        let code2 = try await ffmpeg.run(arguments:
+            ["-y", "-i", input.path, "-i", palette.path, "-lavfi", useFilter, output.path]) { line in
+            lastLine = line
+            if let f = ProgressParser.fraction(fromLine: line, duration: info.duration) { progress(0.5 + f * 0.5) }
+        }
+        guard code2 == 0 else {
+            try? FileManager.default.removeItem(at: output)
+            throw CompressError.ffmpegFailed(exitCode: code2, lastLine: lastLine)
+        }
+        let outBytes = ((try? FileManager.default.attributesOfItem(atPath: output.path)[.size]) as? Int64) ?? 0
+        guard outBytes > 0, outBytes < info.sizeBytes else {
+            try? FileManager.default.removeItem(at: output)
+            throw CompressError.outputNotSmaller
+        }
+        progress(1.0)
+        return CompressionResult(outputURL: output, inputBytes: info.sizeBytes, outputBytes: outBytes)
+    }
 }

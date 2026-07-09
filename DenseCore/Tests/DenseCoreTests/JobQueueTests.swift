@@ -132,4 +132,34 @@ final class JobQueueTests: XCTestCase {
         }
         XCTAssertFalse(FileManager.default.fileExists(atPath: tmp.path), "original should be in Trash")
     }
+
+    func testOptimizeGifJobRunsThroughQueue() async throws {
+        let queue = try makeQueue()
+        queue.add(urls: [fixtureURL("anim-960x720.gif")], kind: .optimizeGif, options: .init(preset: .balanced),
+                  outputDir: FileManager.default.temporaryDirectory)
+        await waitUntilIdle(queue)
+        guard case .done(let result) = queue.jobs[0].status else {
+            XCTFail("expected done, got \(queue.jobs[0].status)"); return
+        }
+        XCTAssertEqual(result.outputURL.pathExtension, "gif")
+        XCTAssertLessThan(result.outputBytes, result.inputBytes)
+    }
+
+    /// Optimized gifs are a replacement-type output (the optimized gif
+    /// stands in for the original, same as a compressed image), so
+    /// trash-on-success applies to them too.
+    @MainActor
+    func testTrashOriginalOnSuccessForOptimizeGifJob() async throws {
+        let queue = try makeQueue()
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("trash-me-\(UUID().uuidString).gif")
+        try FileManager.default.copyItem(at: fixtureURL("anim-960x720.gif"), to: tmp)
+        queue.add(urls: [tmp], kind: .optimizeGif, options: .init(preset: .balanced),
+                  outputDir: FileManager.default.temporaryDirectory, trashOriginalOnSuccess: true)
+        await waitUntilIdle(queue)
+        if case .done = queue.jobs[0].status {} else {
+            XCTFail("expected done, got \(queue.jobs[0].status)")
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: tmp.path), "original should be in Trash")
+    }
 }

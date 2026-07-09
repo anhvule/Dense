@@ -90,15 +90,18 @@ final class AppEnvironment: ObservableObject {
     func handleDrop(urls: [URL], preset: Preset?) -> Int {
         // Expand folders one level, route each file by FileKind. Video goes
         // through the existing compress/GIF path; images get their own job
-        // kind; GIF/PDF inputs and anything else count as rejected for now
-        // (F2/F4 will route .gif/.pdf to their own compressors).
+        // kind; dropped .gif files are optimized in place (the gifMode
+        // toggle only affects video inputs, not gifs); PDF and anything else
+        // count as rejected for now (F4 will route .pdf to its own path).
         var videos: [URL] = []
         var images: [URL] = []
+        var gifs: [URL] = []
         func classify(_ url: URL) {
             switch FileKind.of(url) {
             case .video: videos.append(url)
             case .image: images.append(url)
-            case .gif, .pdf, .unsupported: break
+            case .gif: gifs.append(url)
+            case .pdf, .unsupported: break
             }
         }
         for url in urls {
@@ -122,7 +125,11 @@ final class AppEnvironment: ObservableObject {
             queue.add(urls: images, kind: .image, options: effective,
                       outputDir: outputDir, imageOptions: imageOptions, trashOriginalOnSuccess: trashOriginals)
         }
-        return videos.count + images.count
+        if !gifs.isEmpty {
+            queue.add(urls: gifs, kind: .optimizeGif, options: effective,
+                      outputDir: outputDir, gifOptions: gifOptions, trashOriginalOnSuccess: trashOriginals)
+        }
+        return videos.count + images.count + gifs.count
     }
 
     func handleDrop(urls: [URL]) -> Int { handleDrop(urls: urls, preset: nil) }

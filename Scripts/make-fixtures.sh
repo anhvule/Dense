@@ -19,4 +19,16 @@ Tools/bin/ffmpeg -y -f lavfi -i "testsrc=duration=8:size=1920x1080:rate=30" \
 Tools/bin/ffmpeg -y -f lavfi -i "testsrc2=size=1600x1200:rate=1" -frames:v 1 -update 1 Fixtures/photo.png
 sips -s format jpeg -s formatOptions 100 Fixtures/photo.png --out Fixtures/photo.jpg >/dev/null
 sips -s format heic Fixtures/photo.jpg --out Fixtures/photo.heic >/dev/null
+
+# Animated gif for GIFConverter.optimize tests, encoded directly (no
+# palettegen/paletteuse) via ffmpeg's native gif muxer. Measured empirically:
+# at testsrc2's native/target size (480x360, matching GIFOptions' default
+# maxWidth) the native muxer's palette is already close to what a diff-mode
+# palettegen/paletteuse re-encode produces, so re-optimizing barely moves the
+# needle either way — a naive "encode without palettegen = bloated" fixture
+# does NOT reliably shrink here. What *does* reliably shrink is width: this
+# fixture is generated oversized (960x720, double the default maxWidth), so
+# `optimize`'s scale-down to 480 alone guarantees a large, deterministic size
+# reduction (measured ~43%) regardless of palette/dither effects.
+Tools/bin/ffmpeg -y -f lavfi -i "testsrc2=duration=10:size=960x720:rate=15" Fixtures/anim-960x720.gif
 echo done

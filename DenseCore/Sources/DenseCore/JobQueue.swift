@@ -1,6 +1,6 @@
 import Foundation
 
-public enum JobKind: Equatable { case compress, gif, image }
+public enum JobKind: Equatable { case compress, gif, image, optimizeGif }
 
 public enum JobStatus: Equatable {
     case queued
@@ -110,12 +110,17 @@ public final class JobQueue: ObservableObject {
             case .image:
                 result = try await imageCompressor.compress(input: job.input, options: imageOptions,
                                                             outputDir: outputDir, suffix: options.outputSuffix)
+            case .optimizeGif:
+                result = try await gifConverter.optimize(input: job.input, options: gifOptions,
+                                                         outputDir: outputDir, suffix: options.outputSuffix,
+                                                         progress: onProgress)
             }
             job.status = .done(result)
-            // Trash applies to replacement-type outputs (a compressed video or
-            // image stands in for the original); GIF conversions are
-            // derivatives, so their source video is kept.
-            if trashOriginalOnSuccess, job.kind == .compress || job.kind == .image {
+            // Trash applies to replacement-type outputs (a compressed video,
+            // a compressed image, or an optimized gif all stand in for the
+            // original); video→GIF conversions are derivatives of a kept
+            // source, so they're excluded here.
+            if trashOriginalOnSuccess, job.kind == .compress || job.kind == .image || job.kind == .optimizeGif {
                 try? FileManager.default.trashItem(at: job.input, resultingItemURL: nil)
             }
         } catch CompressError.outputNotSmaller {
