@@ -113,4 +113,23 @@ final class JobQueueTests: XCTestCase {
         if case .done = queue.jobs[0].status {} else { XCTFail("expected done") }
         XCTAssertFalse(FileManager.default.fileExists(atPath: tmp.path), "original should be in Trash")
     }
+
+    /// Images are replacement-type outputs like compressed videos, so
+    /// trash-on-success applies to them too (GIF conversions stay excluded
+    /// as derivatives of a kept source).
+    @MainActor
+    func testTrashOriginalOnSuccessForImageJob() async throws {
+        let queue = try makeQueue()
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("trash-me-\(UUID().uuidString).jpg")
+        try FileManager.default.copyItem(at: fixtureURL("photo.jpg"), to: tmp)
+        queue.add(urls: [tmp], kind: .image, options: .init(preset: .balanced),
+                  outputDir: FileManager.default.temporaryDirectory,
+                  imageOptions: ImageOptions(quality: 0.6), trashOriginalOnSuccess: true)
+        await waitUntilIdle(queue)
+        if case .done = queue.jobs[0].status {} else {
+            XCTFail("expected done, got \(queue.jobs[0].status)")
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: tmp.path), "original should be in Trash")
+    }
 }

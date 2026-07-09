@@ -112,7 +112,10 @@ public final class JobQueue: ObservableObject {
                                                             outputDir: outputDir, suffix: options.outputSuffix)
             }
             job.status = .done(result)
-            if trashOriginalOnSuccess, job.kind == .compress {
+            // Trash applies to replacement-type outputs (a compressed video or
+            // image stands in for the original); GIF conversions are
+            // derivatives, so their source video is kept.
+            if trashOriginalOnSuccess, job.kind == .compress || job.kind == .image {
                 try? FileManager.default.trashItem(at: job.input, resultingItemURL: nil)
             }
         } catch CompressError.outputNotSmaller {

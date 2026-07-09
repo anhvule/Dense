@@ -83,7 +83,18 @@ public struct ImageCompressor {
         guard let dest = CGImageDestinationCreateWithURL(output as CFURL, utType, 1, nil) else {
             throw CompressError.probeFailed("cannot create image destination")
         }
-        var props: [CFString: Any] = [:]
+        // Full-size re-encodes carry the source properties through so EXIF
+        // orientation (phone photos would otherwise render sideways), GPS,
+        // capture date, camera metadata, and color profile survive. The
+        // maxDimension branch must NOT copy them: kCGImageSourceCreateThumbnailWithTransform
+        // bakes orientation into the pixels, so passing the orientation tag
+        // along too would rotate the image twice.
+        var props: [CFString: Any]
+        if options.maxDimension == nil {
+            props = (CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]) ?? [:]
+        } else {
+            props = [:]
+        }
         if ext == "jpg" || ext == "jpeg" || ext == "heic" {
             props[kCGImageDestinationLossyCompressionQuality] = options.quality
         }

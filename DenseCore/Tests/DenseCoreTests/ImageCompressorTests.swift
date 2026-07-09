@@ -1,5 +1,6 @@
 import XCTest
 import ImageIO
+import UniformTypeIdentifiers
 @testable import DenseCore
 
 final class ImageCompressorTests: XCTestCase {
@@ -99,6 +100,54 @@ final class ImageCompressorTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: result.outputURL) }
         let after = try Data(contentsOf: input)
         XCTAssertEqual(before, after)
+    }
+
+    /// EXIF orientation must survive a full-size re-encode: the source
+    /// properties (orientation, GPS, capture date, color profile) pass
+    /// through to the destination, so a phone photo shot in portrait keeps
+    /// rendering upright. The fix preserves the tag itself — orientation 6
+    /// stays 6 with untransposed pixels — rather than baking the rotation in.
+    func testEXIFOrientationPreservedOnFullSizeReencode() async throws {
+        // Synthesize a JPEG tagged orientation 6 (90° rotation needed to display).
+        let source = try XCTUnwrap(CGImageSourceCreateWithURL(fixtureURL("photo.jpg") as CFURL, nil))
+        let image = try XCTUnwrap(CGImageSourceCreateImageAtIndex(source, 0, nil))
+        let rotatedInput = FileManager.default.temporaryDirectory
+            .appendingPathComponent("t-oriented-\(UUID().uuidString).jpg")
+        let dest = try XCTUnwrap(CGImageDestinationCreateWithURL(
+            rotatedInput as CFURL, UTType.jpeg.identifier as CFString, 1, nil))
+        CGImageDestinationAddImage(dest, image, [kCGImagePropertyOrientation: 6] as CFDictionary)
+        XCTAssertTrue(CGImageDestinationFinalize(dest))
+        defer { try? FileManager.default.removeItem(at: rotatedInput) }
+
+        let compressor = try makeCompressor()
+        let result = try await compressor.compress(input: rotatedInput, options: ImageOptions(quality: 0.6),
+                                                    outputDir: FileManager.default.temporaryDirectory, suffix: "-t-exif")
+        defer { try? FileManager.default.removeItem(at: result.outputURL) }
+
+        let outSource = try XCTUnwrap(CGImageSourceCreateWithURL(result.outputURL as CFURL, nil))
+        let outProps = try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(outSource, 0, nil) as? [CFString: Any])
+        XCTAssertEqual(outProps[kCGImagePropertyOrientation] as? Int, 6,
+                       "orientation tag must survive the re-encode")
+        // Pixels stay untransposed (1600x1200): the tag, not the raster, carries the rotation.
+        XCTAssertEqual(outProps[kCGImagePropertyPixelWidth] as? Int, 1600)
+        XCTAssertEqual(outProps[kCGImagePropertyPixelHeight] as? Int, 1200)
+    }
+
+    /// Color profile metadata rides along with the same source-properties
+    /// pass-through that preserves orientation.
+    func testColorProfileSurvivesReencode() async throws {
+        let inSource = try XCTUnwrap(CGImageSourceCreateWithURL(fixtureURL("photo.jpg") as CFURL, nil))
+        let inProps = try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(inSource, 0, nil) as? [CFString: Any])
+        let inProfile = try XCTUnwrap(inProps[kCGImagePropertyProfileName] as? String)
+
+        let compressor = try makeCompressor()
+        let result = try await compressor.compress(input: fixtureURL("photo.jpg"), options: ImageOptions(quality: 0.6),
+                                                    outputDir: FileManager.default.temporaryDirectory, suffix: "-t-profile")
+        defer { try? FileManager.default.removeItem(at: result.outputURL) }
+
+        let outSource = try XCTUnwrap(CGImageSourceCreateWithURL(result.outputURL as CFURL, nil))
+        let outProps = try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(outSource, 0, nil) as? [CFString: Any])
+        XCTAssertEqual(outProps[kCGImagePropertyProfileName] as? String, inProfile)
     }
 
     /// WebP isn't in the required fixture set, so this synthesizes its own
