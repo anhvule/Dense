@@ -1,6 +1,6 @@
-// CompressCore/Tests/CompressCoreTests/FFmpegArgumentsTests.swift
+// DenseCore/Tests/DenseCoreTests/FFmpegArgumentsTests.swift
 import XCTest
-@testable import CompressCore
+@testable import DenseCore
 
 final class FFmpegArgumentsTests: XCTestCase {
     let info1080 = MediaInfo(duration: 100, width: 1920, height: 1080, sizeBytes: 200_000_000)

@@ -47,10 +47,10 @@ fi
 # Sign the app itself last, without --deep (per Apple guidance: sign nested
 # code first, then the outer bundle).
 codesign --force --options runtime --timestamp \
-  --entitlements App/Compress.entitlements --sign "$IDENTITY" "$APP"
+  --entitlements App/Dense.entitlements --sign "$IDENTITY" "$APP"
 
 hdiutil create -volname Dense -srcfolder "$APP" -ov -format UDZO "build/Dense-$VERSION.dmg"
-xcrun notarytool submit "build/Dense-$VERSION.dmg" --keychain-profile compress-notary --wait
+xcrun notarytool submit "build/Dense-$VERSION.dmg" --keychain-profile dense-notary --wait
 xcrun stapler staple "build/Dense-$VERSION.dmg"
 
 # Sparkle signature for appcast — locate sign_update dynamically since its
@@ -65,7 +65,7 @@ echo "DONE: build/Dense-$VERSION.dmg (version $VERSION, build $BUILD)"
 # Docs: one-time setup required before this script can run end-to-end.
 # None of the following has been done on this machine yet — `security
 # find-identity -v -p codesigning` shows no "Developer ID Application" cert,
-# and no `compress-notary` keychain profile exists.
+# and no `dense-notary` keychain profile exists.
 #
 # 1. Create a "Developer ID Application" certificate:
 #    - Xcode: Settings > Accounts > (Apple ID) > Manage Certificates... >
@@ -82,13 +82,13 @@ echo "DONE: build/Dense-$VERSION.dmg (version $VERSION, build $BUILD)"
 #      Developer is sufficient) > download the .p8, note the Key ID and
 #      Issuer ID.
 #    - Run once:
-#        xcrun notarytool store-credentials compress-notary \
+#        xcrun notarytool store-credentials dense-notary \
 #          --key /path/to/AuthKey_XXXX.p8 \
 #          --key-id <KEY_ID> \
 #          --issuer <ISSUER_ID>
 #      This stores the credential in the login keychain under the profile
-#      name "compress-notary" that this script references.
-#    - Verify with: xcrun notarytool history --keychain-profile compress-notary
+#      name "dense-notary" that this script references.
+#    - Verify with: xcrun notarytool history --keychain-profile dense-notary
 #
 # 3. Generate the Sparkle EdDSA signing keys (one time):
 #    - After `xcodegen generate`, the Sparkle SPM package's tools land

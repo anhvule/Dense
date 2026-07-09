@@ -1,6 +1,6 @@
 // App/DestinationDockView.swift
 import SwiftUI
-import CompressCore
+import DenseCore
 import UniformTypeIdentifiers
 
 struct DockPreset: Identifiable {

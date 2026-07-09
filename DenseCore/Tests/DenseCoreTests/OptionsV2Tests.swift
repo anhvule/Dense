@@ -1,6 +1,6 @@
-// CompressCore/Tests/CompressCoreTests/OptionsV2Tests.swift
+// DenseCore/Tests/DenseCoreTests/OptionsV2Tests.swift
 import XCTest
-@testable import CompressCore
+@testable import DenseCore
 
 final class OptionsV2Tests: XCTestCase {
     let info = MediaInfo(duration: 100, width: 1920, height: 1080, sizeBytes: 200_000_000)

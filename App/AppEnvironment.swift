@@ -1,5 +1,5 @@
 import SwiftUI
-import CompressCore
+import DenseCore
 
 @MainActor
 final class AppEnvironment: ObservableObject {

@@ -1,6 +1,6 @@
 // App/FileRowView.swift
 import SwiftUI
-import CompressCore
+import DenseCore
 
 struct FileRowView: View {
     @ObservedObject var job: Job

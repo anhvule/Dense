@@ -1,9 +1,9 @@
 import SwiftUI
-import CompressCore
+import DenseCore
 import Sparkle
 
 @main
-struct CompressApp: App {
+struct DenseApp: App {
     @StateObject private var env = AppEnvironment()
     private let updaterController = SPUStandardUpdaterController(
         startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)

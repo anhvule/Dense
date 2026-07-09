@@ -1,5 +1,5 @@
 import XCTest
-@testable import CompressCore
+@testable import DenseCore
 
 final class MediaProbeTests: XCTestCase {
     func fixtureURL(_ name: String) -> URL {

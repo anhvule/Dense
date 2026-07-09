@@ -1,5 +1,5 @@
 import XCTest
-@testable import CompressCore
+@testable import DenseCore
 
 @MainActor
 final class JobQueueTests: XCTestCase {

@@ -1,8 +1,8 @@
 import XCTest
-@testable import CompressCore
+@testable import DenseCore
 
 final class SmokeTests: XCTestCase {
     func testPackageLoads() {
-        XCTAssertEqual(CompressCore.version, "0.1.0")
+        XCTAssertEqual(DenseCore.version, "0.1.0")
     }
 }

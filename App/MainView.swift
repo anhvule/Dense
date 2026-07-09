@@ -1,5 +1,5 @@
 import SwiftUI
-import CompressCore
+import DenseCore
 import UniformTypeIdentifiers
 
 struct MainView: View {

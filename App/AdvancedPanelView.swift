@@ -1,7 +1,7 @@
 // App/AdvancedPanelView.swift
 import SwiftUI
 import AppKit
-import CompressCore
+import DenseCore
 
 struct AdvancedPanelView: View {
     @EnvironmentObject var env: AppEnvironment

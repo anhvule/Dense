@@ -3,8 +3,8 @@ name: Dense
 options:
   bundleIdPrefix: app.dense
 packages:
-  CompressCore:
-    path: CompressCore
+  DenseCore:
+    path: DenseCore
   Sparkle:
     url: https://github.com/sparkle-project/Sparkle
     majorVersion: 2.0.0
@@ -18,7 +18,7 @@ targets:
       - path: Tools/bin
         buildPhase: resources
     dependencies:
-      - package: CompressCore
+      - package: DenseCore
       - package: Sparkle
     settings:
       base:
@@ -28,7 +28,7 @@ targets:
         ARCHS: "arm64 x86_64"
         ONLY_ACTIVE_ARCH: "NO"
         INFOPLIST_FILE: App/Info.plist
-        CODE_SIGN_ENTITLEMENTS: App/Compress.entitlements
+        CODE_SIGN_ENTITLEMENTS: App/Dense.entitlements
         ENABLE_HARDENED_RUNTIME: "YES"
     info:
       path: App/Info.plist

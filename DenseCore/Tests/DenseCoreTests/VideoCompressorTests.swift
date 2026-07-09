@@ -1,5 +1,5 @@
 import XCTest
-@testable import CompressCore
+@testable import DenseCore
 
 final class VideoCompressorTests: XCTestCase {
     func makeCompressor() throws -> VideoCompressor {

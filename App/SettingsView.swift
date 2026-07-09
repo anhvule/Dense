@@ -1,5 +1,5 @@
 import SwiftUI
-import CompressCore
+import DenseCore
 
 struct SettingsView: View {
     @EnvironmentObject var env: AppEnvironment

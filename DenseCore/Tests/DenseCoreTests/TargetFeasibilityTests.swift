@@ -1,6 +1,6 @@
-// CompressCore/Tests/CompressCoreTests/TargetFeasibilityTests.swift
+// DenseCore/Tests/DenseCoreTests/TargetFeasibilityTests.swift
 import XCTest
-@testable import CompressCore
+@testable import DenseCore
 
 final class TargetFeasibilityTests: XCTestCase {
     func testFeasibleTargetReturnsNil() {

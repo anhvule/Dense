@@ -1,5 +1,5 @@
 import XCTest
-@testable import CompressCore
+@testable import DenseCore
 
 final class DictStore: KeyValueStore {
     var dict: [String: String] = [:]
