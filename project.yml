@@ -10,7 +10,10 @@ targets:
     type: application
     platform: macOS
     deploymentTarget: "13.0"
-    sources: [App]
+    sources:
+      - App
+      - path: Tools/bin
+        buildPhase: resources
     dependencies:
       - package: CompressCore
     settings:
