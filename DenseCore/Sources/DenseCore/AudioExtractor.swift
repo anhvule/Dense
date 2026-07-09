@@ -1,25 +1,5 @@
 import Foundation
 
-/// Caches encoder-availability lookups per ffmpeg binary path so a batch of
-/// extraction jobs only pays the `-encoders` process-spawn cost once. Marked
-/// `@unchecked Sendable` because all access to `cache` is guarded by `lock`,
-/// matching the pattern used by `FFmpegRunner`'s internal buffers.
-private final class EncoderAvailabilityCache: @unchecked Sendable {
-    static let shared = EncoderAvailabilityCache()
-    private let lock = NSLock()
-    private var cache: [String: Bool] = [:]
-
-    func cached(for path: String) -> Bool? {
-        lock.lock(); defer { lock.unlock() }
-        return cache[path]
-    }
-
-    func store(_ value: Bool, for path: String) {
-        lock.lock(); defer { lock.unlock() }
-        cache[path] = value
-    }
-}
-
 /// Extracts a video's audio track as a standalone file: MP3 (`libmp3lame
 /// -q:a 2`) when the bundled ffmpeg supports it, falling back to AAC
 /// (`-b:a 192k`) into a `.m4a` container otherwise. A per-file action (right-
@@ -96,16 +76,6 @@ public struct AudioExtractor {
     /// Probes `ffmpegURL -encoders` for `libmp3lame` support, caching the
     /// result per binary path.
     public static func mp3Available(ffmpegURL: URL) async -> Bool {
-        if let cached = EncoderAvailabilityCache.shared.cached(for: ffmpegURL.path) { return cached }
-        let runner = FFmpegRunner(binaryURL: ffmpegURL)
-        let result: Bool
-        if let (code, data) = try? await runner.runCapturingStdout(arguments: ["-hide_banner", "-encoders"]),
-           code == 0, let text = String(data: data, encoding: .utf8) {
-            result = text.contains("libmp3lame")
-        } else {
-            result = false
-        }
-        EncoderAvailabilityCache.shared.store(result, for: ffmpegURL.path)
-        return result
+        await EncoderAvailability.isAvailable("libmp3lame", ffmpegURL: ffmpegURL)
     }
 }

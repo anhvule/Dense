@@ -23,6 +23,11 @@ final class AppEnvironment: ObservableObject {
     @AppStorage("imageQuality") var imageQuality: Double = 0.75
     @AppStorage("pdfQualityRaw") var pdfQualityRaw: String = PDFQuality.balanced.rawValue
     @AppStorage("didMigrateHEVCToContainer") private var didMigrateHEVCToContainer: Bool = false
+    /// 0 = Off; otherwise the fps cap passed straight to `CompressionOptions.fpsCap`.
+    @AppStorage("fpsCapRaw") var fpsCapRaw: Int = 0
+    /// 0 = Off (let ffmpeg pick); otherwise `CompressionOptions.threadLimit`.
+    @AppStorage("threadLimitRaw") var threadLimitRaw: Int = 0
+    @AppStorage("stripMetadata") var stripMetadata: Bool = false
 
     var defaultPreset: Preset {
         get { Preset(rawValue: defaultPresetRaw) ?? .balanced }
@@ -31,13 +36,30 @@ final class AppEnvironment: ObservableObject {
 
     var options: CompressionOptions {
         var opts = CompressionOptions(preset: defaultPreset)
-        opts.useHEVC = containerRaw == "mp4-hevc"
-        opts.container = containerRaw == "mov" ? .mov : .mp4
+        switch containerRaw {
+        case "mp4-hevc":
+            opts.codec = .hevc
+            opts.container = .mp4
+        case "mov":
+            opts.codec = .h264
+            opts.container = .mov
+        case "webm-vp9":
+            // VP9 always writes .webm regardless of `container`
+            // (VideoCompressor.outputURL consults codec first).
+            opts.codec = .vp9
+            opts.container = .mp4
+        default:
+            opts.codec = .h264
+            opts.container = .mp4
+        }
         opts.removeAudio = removeAudio
         opts.resolutionCap = ResolutionCap(rawValue: resolutionCapRaw)
         opts.customTargetMB = Double(customTargetMBText.replacingOccurrences(of: ",", with: "."))
             .flatMap { $0 > 0 ? $0 : nil }
         opts.outputSuffix = outputSuffix.isEmpty ? "-compressed" : outputSuffix
+        opts.fpsCap = fpsCapRaw == 0 ? nil : fpsCapRaw
+        opts.threadLimit = threadLimitRaw == 0 ? nil : threadLimitRaw
+        opts.stripMetadata = stripMetadata
         return opts
     }
 

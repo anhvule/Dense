@@ -15,7 +15,8 @@ struct AdvancedPanelView: View {
                     Text("MP4 · H.264").tag("mp4")
                     Text("MP4 · HEVC").tag("mp4-hevc")
                     Text("MOV").tag("mov")
-                }.labelsHidden().frame(width: 150)
+                    Text("WebM · VP9 (slow, software)").tag("webm-vp9")
+                }.labelsHidden().frame(width: 180)
                 label("Resolution", systemImage: "aspectratio")
                 Picker("", selection: $env.resolutionCapRaw) {
                     Text("Preset default").tag("")
@@ -49,6 +50,23 @@ struct AdvancedPanelView: View {
                         Button("Change…") { pickFolder() }
                     }.gridCellColumns(3)
                 }
+            }
+            GridRow {
+                label("FPS cap", systemImage: "timer")
+                Picker("", selection: $env.fpsCapRaw) {
+                    Text("Off").tag(0)
+                    Text("24").tag(24)
+                    Text("30").tag(30)
+                    Text("60").tag(60)
+                }.labelsHidden().frame(width: 150)
+                label("CPU cores", systemImage: "cpu")
+                Stepper(env.threadLimitRaw == 0 ? "Off" : "\(env.threadLimitRaw) core\(env.threadLimitRaw == 1 ? "" : "s")",
+                        value: $env.threadLimitRaw, in: 0...ProcessInfo.processInfo.processorCount)
+            }
+            GridRow {
+                label("Metadata", systemImage: "doc.text.magnifyingglass")
+                Toggle("Strip metadata", isOn: $env.stripMetadata).toggleStyle(.checkbox)
+                    .gridCellColumns(3)
             }
             GridRow {
                 label("Originals", systemImage: "trash")
