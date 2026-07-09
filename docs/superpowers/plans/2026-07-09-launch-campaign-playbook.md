@@ -21,14 +21,14 @@ Companion to `2026-07-09-video-compressor-app.md` (the build plan). This is oper
 - [ ] **Day 2:** Global find/replace the codename in the repo (`project.yml`, Info.plist, landing page `<title>`/copy) per the build plan's Global Constraints. Attach the domain to the Cloudflare Pages site; set the real Buttondown embed URL in `Site/index.html`.
 - [ ] **Day 2–3:** Landing page live with waitlist + "35% off at launch" incentive. Post it.
 - [ ] **Day 3–7:** Daily X posts from build progress (the build plan's Tasks 1–5 all produce postable moments — the fetch script pulling FFmpeg, the first green test suite, the first compressed fixture).
-- [ ] **Day 5:** First vertical clip: screen recording of *anything* compressing, raw and unpolished is fine. Caption pattern: "POV: your screen recording is 480MB and Discord says no."
+- [ ] **Day 5:** First vertical clip: screen recording of *anything* compressing, raw and unpolished is fine. Caption pattern: "POV: your screen recording is 480MB and Discord says no." If the redesigned destination-dock UI is ready, prefer one of the two signature demo moments below over a generic recording.
 - [ ] **Day 7:** Weekly recap thread on X (what shipped, what's next, waitlist count if ≥25).
 
 **Exit criteria:** name + domain live, landing page collecting emails, 7 straight days of posts, first vertical clip out.
 
 ## Week 2 — Audience building (days 8–14)
 
-- [ ] Every completed build task → a demo clip. Priority demos: **target-size mode** ("I typed 25 and it just… fits now") and the **Discord preset**. These are the money demos; make them tight (under 20s, big text overlay, real file sizes).
+- [ ] Every completed build task → a demo clip. **The two signature demo moments — the money shots for every short-form clip this month:** (1) **dropping a file onto the Discord dock card** and watching it pick up the ≤25MB preset in one drag (no menus, no settings dialog — the destination-dock IS the pitch), and (2) **the size bar visibly shrinking** in the file row while a real encode runs (the shrink-meter animating down is the single most legible "this app works" visual we have). Also keep target-size mode ("I typed 25 and it just… fits now") in rotation. Make all of these tight (under 20s, big text overlay, real file sizes).
 - [ ] **Community seeding — give value first, self-promo later.** Spend 20 min/day answering "how do I make this video smaller" questions in: r/VideoEditing, r/NewTubers, r/Twitch, r/macapps, creator Discords you already use. Recommend existing tools honestly (yes, including HandBrake and Compresto). Mention your app only where rules allow and it's genuinely relevant. You're building the account standing you'll need at launch.
 - [ ] **Day 10:** Update landing page with real before/after numbers from actual builds.
 - [ ] **Day 12:** Post an honest comparison: your app vs HandBrake on the same file (speed, size, clicks). Fair comparisons get shared; hit pieces don't.
