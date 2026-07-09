@@ -5,6 +5,7 @@ import CompressCore
 struct FileRowView: View {
     @ObservedObject var job: Job
     @State private var thumb: NSImage?
+    @State private var inputSizeText: String = ""
 
     var body: some View {
         HStack(spacing: 10) {
@@ -22,12 +23,16 @@ struct FileRowView: View {
                     Spacer()
                     trailing
                 }
-                SizeBar(fraction: barFraction, active: isRunning)
+                SizeBar(fraction: barFraction, active: isRunning, label: sizeBarLabel)
                 subtitle
             }
         }
         .padding(.vertical, 6)
-        .task { thumb = await ThumbnailLoader.shared.thumbnail(for: job.input, side: 92) }
+        .task {
+            thumb = await ThumbnailLoader.shared.thumbnail(for: job.input, side: 92)
+            let size = ((try? FileManager.default.attributesOfItem(atPath: job.input.path)[.size]) as? Int64) ?? 0
+            inputSizeText = byte(size)
+        }
     }
 
     private var isRunning: Bool { if case .running = job.status { return true }; return false }
@@ -48,6 +53,8 @@ struct FileRowView: View {
                 .foregroundStyle(.green)
             Button { NSWorkspace.shared.activateFileViewerSelecting([r.outputURL]) }
                 label: { Image(systemName: "magnifyingglass") }.buttonStyle(.borderless)
+                .accessibilityLabel("Show compressed file in Finder")
+                .help("Show in Finder")
         case .running(let p):
             Text("\(Int(p * 100))%").font(.system(size: 12)).foregroundStyle(.secondary).monospacedDigit()
         default: EmptyView()
@@ -59,7 +66,7 @@ struct FileRowView: View {
         case .queued:
             Text("Waiting…").font(.system(size: 11)).foregroundStyle(.secondary)
         case .running:
-            Text(format(bytesOf: job.input)).font(.system(size: 11)).foregroundStyle(.secondary)
+            Text(inputSizeText).font(.system(size: 11)).foregroundStyle(.secondary)
         case .done(let r):
             Text("\(byte(r.inputBytes)) → \(byte(r.outputBytes))").font(.system(size: 11)).foregroundStyle(.secondary)
         case .failed(let message):
@@ -70,15 +77,26 @@ struct FileRowView: View {
     }
 
     private func byte(_ b: Int64) -> String { ByteCountFormatter.string(fromByteCount: b, countStyle: .file) }
-    private func format(bytesOf url: URL) -> String {
-        let size = ((try? FileManager.default.attributesOfItem(atPath: url.path)[.size]) as? Int64) ?? 0
-        return byte(size)
+
+    private var sizeBarLabel: String {
+        switch job.status {
+        case .queued:
+            return "Waiting"
+        case .running(let p):
+            return "Compressing, \(Int(p * 100)) percent complete"
+        case .done(let r):
+            let fraction = max(0.04, Double(r.outputBytes) / Double(max(r.inputBytes, 1)))
+            return "Compressed to \(Int(fraction * 100)) percent of original size"
+        case .failed, .skippedAlreadyOptimized:
+            return "Not compressed"
+        }
     }
 }
 
 struct SizeBar: View {
     let fraction: Double
     let active: Bool
+    let label: String
 
     var body: some View {
         GeometryReader { geo in
@@ -91,6 +109,6 @@ struct SizeBar: View {
             }
         }
         .frame(height: 8)
-        .accessibilityLabel("File size \(Int(fraction * 100)) percent of original")
+        .accessibilityLabel(label)
     }
 }
