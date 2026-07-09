@@ -48,8 +48,10 @@ Check off each box and write the actual result next to any failure.
       undisturbed, the same rejection banner appears (it must still show even
       though the empty-state placeholder isn't visible).
 - [ ] **Mixed drop** — drop a video and a `.png` together in one gesture.
-      Expected: the video is accepted and queued; the banner still appears
-      because at least one item was rejected.
+      Expected: the video is accepted and queued, the `.png` is silently
+      skipped, and NO rejection banner appears. (Deliberate rule: the banner
+      only appears when *nothing* in the drop was usable — if at least one
+      video was accepted, the drop counts as a success and stays silent.)
 
 ## 2. Destination dock
 
@@ -165,6 +167,11 @@ control moved.
       and confirm the app refuses/adjusts rather than clobbering the original.
 - [ ] Re-running compression on an already-compressed output doesn't recurse
       into runaway re-suffixing.
+- [ ] **Known limitation (v1.1)**: two same-named files from different source
+      folders (e.g. two `clip.mp4` files in different directories) compressed
+      simultaneously into one custom output folder can collide on the same
+      output path. Avoid same-stem batches into a custom folder for now; this
+      is a known limitation, not a regression to chase down before v1.
 
 ## 7. Licensing / trial
 
@@ -201,6 +208,12 @@ control moved.
       the appcast reflects the current shipped version.
 - [ ] Update flow downloads, verifies signature, and installs without manual
       Gatekeeper workarounds.
+- [ ] **Real 1.0.0 → 1.0.1 upgrade via a local appcast** — serve `Site/` locally
+      (e.g. `python3 -m http.server` from `Site/`), point a locally-built
+      1.0.0 install's `SUFeedURL` at it, then bump both `MARKETING_VERSION`
+      and `CURRENT_PROJECT_VERSION`/`sparkle:version` to a 1.0.1 build and
+      re-serve the updated appcast. Confirm Sparkle detects, downloads,
+      verifies, and installs the update, and that About shows 1.0.1 afterward.
 
 ## 10. Cross-cutting persistence (relaunch)
 
