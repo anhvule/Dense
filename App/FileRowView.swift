@@ -3,6 +3,7 @@ import SwiftUI
 import DenseCore
 
 struct FileRowView: View {
+    @EnvironmentObject var env: AppEnvironment
     @ObservedObject var job: Job
     @State private var thumb: NSImage?
     @State private var inputSizeText: String = ""
@@ -40,6 +41,16 @@ struct FileRowView: View {
         .padding(10)
         .glassCard(radius: Theme.rowRadius)
         .transition(.move(edge: .top).combined(with: .opacity))
+        .contextMenu {
+            // Per-file action, not a batch mode — deliberately no advanced-panel
+            // checkbox for this (see AppEnvironment/JobQueue trash-gate notes).
+            if FileKind.of(job.input) == .video {
+                Button("Extract audio") {
+                    env.queue.add(urls: [job.input], kind: .extractAudio,
+                                  options: env.options, outputDir: env.outputDir)
+                }
+            }
+        }
         .task {
             thumb = await ThumbnailLoader.shared.thumbnail(for: job.input, side: 92)
             let size = ((try? FileManager.default.attributesOfItem(atPath: job.input.path)[.size]) as? Int64) ?? 0
@@ -92,7 +103,11 @@ struct FileRowView: View {
         case .running:
             Text(inputSizeText).font(.system(size: 11)).foregroundStyle(.secondary).monospacedDigit()
         case .done(let r):
-            Text("\(byte(r.inputBytes)) → \(byte(r.outputBytes))").font(.system(size: 11)).foregroundStyle(.secondary).monospacedDigit()
+            if job.kind == .extractAudio {
+                Text(r.outputURL.lastPathComponent).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+            } else {
+                Text("\(byte(r.inputBytes)) → \(byte(r.outputBytes))").font(.system(size: 11)).foregroundStyle(.secondary).monospacedDigit()
+            }
         case .failed(let message):
             Text(message).font(.system(size: 11)).foregroundStyle(.red).lineLimit(1)
         case .skippedAlreadyOptimized:

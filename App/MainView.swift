@@ -21,7 +21,7 @@ struct MainView: View {
             }
             if showAdvanced { AdvancedPanelView().environmentObject(env) }
             if dropRejected {
-                Text("Images & PDFs coming soon — v1 is all about video.")
+                Text("That file type isn't supported yet.")
                     .font(.caption.weight(.medium))
                     .padding(.vertical, 6).padding(.horizontal, 12)
                     .background(Capsule().fill(.orange.opacity(0.15)))

@@ -1,4 +1,6 @@
 import XCTest
+import CoreGraphics
+import ImageIO
 @testable import DenseCore
 
 @MainActor
@@ -7,7 +9,9 @@ final class JobQueueTests: XCTestCase {
         let ffmpeg = try XCTUnwrap(FFmpegRunner.locateTool(named: "ffmpeg"))
         let ffprobe = try XCTUnwrap(FFmpegRunner.locateTool(named: "ffprobe"))
         return JobQueue(compressor: VideoCompressor(ffmpegURL: ffmpeg, ffprobeURL: ffprobe),
-                        gifConverter: GIFConverter(ffmpegURL: ffmpeg, ffprobeURL: ffprobe))
+                        gifConverter: GIFConverter(ffmpegURL: ffmpeg, ffprobeURL: ffprobe),
+                        imageCompressor: ImageCompressor(ffmpegURL: ffmpeg),
+                        audioExtractor: AudioExtractor(ffmpegURL: ffmpeg, ffprobeURL: ffprobe))
     }
     func fixtureURL(_ name: String) -> URL {
         var dir = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
@@ -18,6 +22,24 @@ final class JobQueueTests: XCTestCase {
         }
         fatalError("fixture missing")
     }
+    /// 3 pages of the 1600x1200 photo.jpg fixture drawn full-page — an
+    /// image-heavy PDF that exercises the .pdf job kind end to end.
+    func makeImageHeavyPDF() throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("t-queue-image-heavy-\(UUID().uuidString).pdf")
+        let source = try XCTUnwrap(CGImageSourceCreateWithURL(fixtureURL("photo.jpg") as CFURL, nil))
+        let image = try XCTUnwrap(CGImageSourceCreateImageAtIndex(source, 0, nil))
+        var mediaBox = CGRect(x: 0, y: 0, width: 612, height: 792)
+        let ctx = try XCTUnwrap(CGContext(url as CFURL, mediaBox: &mediaBox, nil))
+        for _ in 0..<3 {
+            ctx.beginPDFPage(nil)
+            ctx.draw(image, in: mediaBox)
+            ctx.endPDFPage()
+        }
+        ctx.closePDF()
+        return url
+    }
+
     func waitUntilIdle(_ queue: JobQueue, timeout: TimeInterval = 120) async {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
@@ -65,6 +87,12 @@ final class JobQueueTests: XCTestCase {
         XCTAssertEqual(JobQueue.message(for: CompressError.outputNotSmaller), "Already optimized")
         XCTAssertTrue(JobQueue.message(for: CompressError.unreachableTarget(closestMB: 125.1))
             .contains("125"))
+        XCTAssertEqual(JobQueue.message(for: CompressError.probeFailed("Password-protected PDF")),
+                       "Password-protected PDF — remove the password first")
+        XCTAssertEqual(JobQueue.message(for: CompressError.probeFailed("no audio stream")),
+                       "No audio track in this file")
+        XCTAssertEqual(JobQueue.message(for: CompressError.probeFailed("ffprobe exit 1")),
+                       "Not a readable video file")
     }
 
     func testCancelAllNeverShowsRawFfmpegFailureMessage() async throws {
@@ -110,6 +138,115 @@ final class JobQueueTests: XCTestCase {
                   outputDir: FileManager.default.temporaryDirectory, trashOriginalOnSuccess: true)
         await waitUntilIdle(queue)
         if case .done = queue.jobs[0].status {} else { XCTFail("expected done") }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: tmp.path), "original should be in Trash")
+    }
+
+    /// Images are replacement-type outputs like compressed videos, so
+    /// trash-on-success applies to them too (GIF conversions stay excluded
+    /// as derivatives of a kept source).
+    @MainActor
+    func testTrashOriginalOnSuccessForImageJob() async throws {
+        let queue = try makeQueue()
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("trash-me-\(UUID().uuidString).jpg")
+        try FileManager.default.copyItem(at: fixtureURL("photo.jpg"), to: tmp)
+        queue.add(urls: [tmp], kind: .image, options: .init(preset: .balanced),
+                  outputDir: FileManager.default.temporaryDirectory,
+                  imageOptions: ImageOptions(quality: 0.6), trashOriginalOnSuccess: true)
+        await waitUntilIdle(queue)
+        if case .done = queue.jobs[0].status {} else {
+            XCTFail("expected done, got \(queue.jobs[0].status)")
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: tmp.path), "original should be in Trash")
+    }
+
+    func testOptimizeGifJobRunsThroughQueue() async throws {
+        let queue = try makeQueue()
+        queue.add(urls: [fixtureURL("anim-960x720.gif")], kind: .optimizeGif, options: .init(preset: .balanced),
+                  outputDir: FileManager.default.temporaryDirectory)
+        await waitUntilIdle(queue)
+        guard case .done(let result) = queue.jobs[0].status else {
+            XCTFail("expected done, got \(queue.jobs[0].status)"); return
+        }
+        XCTAssertEqual(result.outputURL.pathExtension, "gif")
+        XCTAssertLessThan(result.outputBytes, result.inputBytes)
+    }
+
+    func testPDFJobRunsThroughQueue() async throws {
+        let queue = try makeQueue()
+        let input = try makeImageHeavyPDF()
+        defer { try? FileManager.default.removeItem(at: input) }
+        queue.add(urls: [input], kind: .pdf, options: .init(preset: .balanced),
+                  outputDir: FileManager.default.temporaryDirectory, pdfQuality: .balanced)
+        await waitUntilIdle(queue)
+        guard case .done(let result) = queue.jobs[0].status else {
+            XCTFail("expected done, got \(queue.jobs[0].status)"); return
+        }
+        XCTAssertEqual(result.outputURL.pathExtension, "pdf")
+        XCTAssertLessThan(result.outputBytes, result.inputBytes)
+    }
+
+    /// PDFs are replacement-type outputs too — trash-on-success applies.
+    @MainActor
+    func testTrashOriginalOnSuccessForPDFJob() async throws {
+        let queue = try makeQueue()
+        let source = try makeImageHeavyPDF()
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("trash-me-\(UUID().uuidString).pdf")
+        try FileManager.default.copyItem(at: source, to: tmp)
+        try? FileManager.default.removeItem(at: source)
+        queue.add(urls: [tmp], kind: .pdf, options: .init(preset: .balanced),
+                  outputDir: FileManager.default.temporaryDirectory, pdfQuality: .balanced, trashOriginalOnSuccess: true)
+        await waitUntilIdle(queue)
+        if case .done = queue.jobs[0].status {} else {
+            XCTFail("expected done, got \(queue.jobs[0].status)")
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: tmp.path), "original should be in Trash")
+    }
+
+    func testExtractAudioJobRunsThroughQueue() async throws {
+        let queue = try makeQueue()
+        queue.add(urls: [fixtureURL("clip-2s.mp4")], kind: .extractAudio, options: .init(preset: .balanced),
+                  outputDir: FileManager.default.temporaryDirectory)
+        await waitUntilIdle(queue)
+        guard case .done(let result) = queue.jobs[0].status else {
+            XCTFail("expected done, got \(queue.jobs[0].status)"); return
+        }
+        XCTAssertTrue(["mp3", "m4a"].contains(result.outputURL.pathExtension))
+    }
+
+    /// Extracted audio is a derivative of a kept source (like a video→GIF
+    /// conversion), not a replacement output, so trash-on-success must NOT
+    /// apply to it.
+    @MainActor
+    func testTrashOriginalOnSuccessDoesNotApplyToExtractAudioJob() async throws {
+        let queue = try makeQueue()
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("trash-me-\(UUID().uuidString).mp4")
+        try FileManager.default.copyItem(at: fixtureURL("clip-2s.mp4"), to: tmp)
+        queue.add(urls: [tmp], kind: .extractAudio, options: .init(preset: .balanced),
+                  outputDir: FileManager.default.temporaryDirectory, trashOriginalOnSuccess: true)
+        await waitUntilIdle(queue)
+        if case .done = queue.jobs[0].status {} else {
+            XCTFail("expected done, got \(queue.jobs[0].status)")
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: tmp.path), "original must be kept, not trashed")
+    }
+
+    /// Optimized gifs are a replacement-type output (the optimized gif
+    /// stands in for the original, same as a compressed image), so
+    /// trash-on-success applies to them too.
+    @MainActor
+    func testTrashOriginalOnSuccessForOptimizeGifJob() async throws {
+        let queue = try makeQueue()
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("trash-me-\(UUID().uuidString).gif")
+        try FileManager.default.copyItem(at: fixtureURL("anim-960x720.gif"), to: tmp)
+        queue.add(urls: [tmp], kind: .optimizeGif, options: .init(preset: .balanced),
+                  outputDir: FileManager.default.temporaryDirectory, trashOriginalOnSuccess: true)
+        await waitUntilIdle(queue)
+        if case .done = queue.jobs[0].status {} else {
+            XCTFail("expected done, got \(queue.jobs[0].status)")
+        }
         XCTAssertFalse(FileManager.default.fileExists(atPath: tmp.path), "original should be in Trash")
     }
 }

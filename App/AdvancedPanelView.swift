@@ -63,6 +63,18 @@ struct AdvancedPanelView: View {
                 Stepper("fps \(env.gifFps)", value: $env.gifFps, in: 5...30)
                 Stepper("width \(env.gifWidth)", value: $env.gifWidth, in: 240...960, step: 80)
             }
+            GridRow {
+                label("Image quality", systemImage: "photo")
+                Picker("", selection: $env.imageQuality) {
+                    Text("Good").tag(0.85)
+                    Text("Balanced").tag(0.75)
+                    Text("Small").tag(0.55)
+                }.labelsHidden().frame(width: 150)
+                label("PDF quality", systemImage: "doc.richtext")
+                Picker("", selection: $env.pdfQualityRaw) {
+                    ForEach(PDFQuality.allCases) { Text($0.displayName).tag($0.rawValue) }
+                }.labelsHidden().frame(width: 150)
+            }
         }
         .padding(14)
         .glassCard()
