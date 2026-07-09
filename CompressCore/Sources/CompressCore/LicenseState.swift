@@ -32,9 +32,20 @@ public final class KeychainStore: KeyValueStore {
         var add = base
         add[kSecValueData as String] = Data(value.utf8)
         let status = SecItemAdd(add as CFDictionary, nil)
-        if status != errSecSuccess {
-            UserDefaults.standard.set(value, forKey: "kv.\(key)")
+        if status == errSecSuccess {
+            return
         }
+        if status == errSecDuplicateItem {
+            let updateStatus = SecItemUpdate(base as CFDictionary,
+                                              [kSecValueData as String: Data(value.utf8)] as CFDictionary)
+            if updateStatus == errSecSuccess {
+                return
+            }
+        }
+        // Both add and update (if attempted) failed: fall back to UserDefaults, and
+        // best-effort remove any stale Keychain item so it can't shadow the fallback value.
+        SecItemDelete(base as CFDictionary)
+        UserDefaults.standard.set(value, forKey: "kv.\(key)")
     }
 }
 
