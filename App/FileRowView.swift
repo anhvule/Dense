@@ -33,7 +33,7 @@ struct FileRowView: View {
                     Spacer()
                     trailing
                 }
-                SizeBar(fraction: barFraction, active: isRunning, label: sizeBarLabel)
+                SizeBar(fraction: barFraction, fill: barFill, label: sizeBarLabel)
                 subtitle
             }
         }
@@ -47,7 +47,13 @@ struct FileRowView: View {
         }
     }
 
-    private var isRunning: Bool { if case .running = job.status { return true }; return false }
+    private var barFill: Color {
+        switch job.status {
+        case .running: return Theme.accent
+        case .done: return Theme.success
+        case .queued, .failed, .skippedAlreadyOptimized: return Color.primary.opacity(0.15)
+        }
+    }
 
     private var barFraction: Double {
         switch job.status {
@@ -113,7 +119,7 @@ struct FileRowView: View {
 
 struct SizeBar: View {
     let fraction: Double
-    let active: Bool
+    let fill: Color
     let label: String
 
     var body: some View {
@@ -121,7 +127,7 @@ struct SizeBar: View {
             ZStack(alignment: .leading) {
                 Capsule().fill(Color.primary.opacity(0.08))
                 Capsule()
-                    .fill(active ? Theme.accent : Theme.success)
+                    .fill(fill)
                     .frame(width: max(6, geo.size.width * fraction))
                     .animation(.spring(response: 0.5, dampingFraction: 0.75), value: fraction)
             }
