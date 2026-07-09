@@ -55,11 +55,13 @@ Four components:
 - `JobQueue`: concurrent execution with per-file progress, bounded parallelism, cancel support. Batching hundreds of files is a v1 requirement.
 - File-type detection routes dropped files; non-video types get a clear "coming soon" rejection message (and seed the v1.1 waitlist).
 
-**2. UI (SwiftUI)**
-- Single main window: drop zone → queue list. Each row shows filename, before/after sizes, savings %, live progress, and status.
-- Preset picker prominent in the main window (destination presets are the identity of the product, not a buried setting).
-- Settings pane: default preset, output location, keep-original vs. replace (default: keep original, output `-compressed` suffix).
-- Deliberately minimal. The app's simplicity is the marketing message.
+**2. UI (SwiftUI) — "Destination dock + shrink meter" (revised 2026-07-09 after v1 UI review)**
+- Signature interaction: destination presets rendered as large tactile **drop targets** (Discord, Email, YouTube, Web/Social, Custom) — you drop the video *onto where it's going*. Clicking a card selects it as the active preset for subsequent drops.
+- Signature visual: each queued file is a row whose horizontal **size bar's length represents file size** — compression visibly shrinks the bar to the output fraction, with before → after numbers and savings %. Video thumbnail (QuickLook) + type/size badge per row.
+- Batch header: file count, total input size, live total savings; Clear finished / Cancel all.
+- Advanced panel (slide-down, collapsed by default): container format (MP4 H.264 / MP4 HEVC / MOV), resolution cap (same as input / 2160p / 1080p / 720p), remove audio, custom target size (number + MB/KB), output folder (next to original / custom), filename suffix, move-originals-to-Trash-after-success toggle (Trash, never hard delete), GIF mode with fps + width steppers.
+- All settings persist via @AppStorage. Simple by default; the full configuration is one click away.
+- Timeline note: user chose quality-first flexibility; video→GIF stays in scope.
 
 **3. Licensing & trial**
 - Trial start date stored in Keychain (survives reinstall), with a file fallback.
