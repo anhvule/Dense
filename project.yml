@@ -1,0 +1,44 @@
+# project.yml
+name: Dense
+options:
+  bundleIdPrefix: app.dense
+packages:
+  DenseCore:
+    path: DenseCore
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    majorVersion: 2.0.0
+targets:
+  Dense:
+    type: application
+    platform: macOS
+    deploymentTarget: "13.0"
+    sources:
+      - App
+      - path: Tools/bin
+        buildPhase: resources
+    dependencies:
+      - package: DenseCore
+      - package: Sparkle
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.dense.mac
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        ARCHS: "arm64 x86_64"
+        ONLY_ACTIVE_ARCH: "NO"
+        INFOPLIST_FILE: App/Info.plist
+        CODE_SIGN_ENTITLEMENTS: App/Dense.entitlements
+        ENABLE_HARDENED_RUNTIME: "YES"
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleName: Dense
+        CFBundleDisplayName: Dense
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSMinimumSystemVersion: "13.0"
+        NSHumanReadableCopyright: "Uses FFmpeg (ffmpeg.org) under the GPL, run as a separate process. Source: see website."
+        SUFeedURL: https://REPLACE-AT-LAUNCH.example/appcast.xml
+        SUPublicEDKey: REPLACE-AT-LAUNCH-EDKEY
+        SUEnableAutomaticChecks: true
