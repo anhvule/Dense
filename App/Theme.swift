@@ -5,13 +5,13 @@ import AppKit
 enum Theme {
     static let accent = Color(nsColor: NSColor(name: nil) { appearance in
         appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-            ? NSColor(red: 0.498, green: 0.467, blue: 0.867, alpha: 1)   // #7F77DD
-            : NSColor(red: 0.357, green: 0.310, blue: 0.839, alpha: 1)   // #5B4FD6
+            ? NSColor(red: 0.114, green: 0.620, blue: 0.459, alpha: 1)   // #1D9E75
+            : NSColor(red: 0.059, green: 0.431, blue: 0.337, alpha: 1)   // #0F6E56
     })
     static let success = Color(nsColor: NSColor(name: nil) { appearance in
         appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-            ? NSColor(red: 0.365, green: 0.792, blue: 0.647, alpha: 1)   // #5DCAA5
-            : NSColor(red: 0.059, green: 0.431, blue: 0.337, alpha: 1)   // #0F6E56
+            ? NSColor(red: 0.592, green: 0.769, blue: 0.349, alpha: 1)   // #97C459
+            : NSColor(red: 0.231, green: 0.427, blue: 0.067, alpha: 1)   // #3B6D11
     })
     static let cardRadius: CGFloat = 12
     static let rowRadius: CGFloat = 10
