@@ -4,29 +4,234 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Dense — your video, 90% smaller, ready for anywhere</title>
-  <meta name="description" content="Drag a video in. Get it back sized for Discord, email, or YouTube. Offline, hardware-accelerated, one-time price.">
+  <meta name="description" content="Dense is a native Mac app that drags your videos, images, GIFs and PDFs down to size — offline, hardware-accelerated, one-time price. No subscription.">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <header class="site-nav">
+    <div class="nav-inner">
+      <a href="index.html" class="logo">Dense</a>
+      <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+      <nav class="nav-links">
+        <a href="index.html#features">Features</a>
+        <a href="pricing.html">Pricing</a>
+        <a href="docs/index.html">Docs</a>
+        <a href="changelog.html">Changelog</a>
+        <a href="#" class="btn-download"><!-- REPLACE-AT-LAUNCH: link to signed DMG --> Download</a>
+      </nav>
+    </div>
+  </header>
+
   <main>
     <h1>Your video, 90% smaller,<br>ready for anywhere.</h1>
-    <p class="sub">Discord, email, YouTube — one drag. Offline. Mac-native. No subscription.</p>
-    <img src="demo.gif" alt="Demo: a large video being compressed into a small, Discord-ready file" class="demo">
+    <p class="sub">Drag files onto a destination — Discord, Email, YouTube, Web — and get them back sized to fit. Offline, hardware-accelerated, Mac-native. No subscription.</p>
+
+    <div class="mockup" role="img" aria-label="Dense app window showing five destination presets and two file rows partway through compressing">
+      <div class="mockup-chrome">
+        <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+        <span class="mockup-title">Dense</span>
+      </div>
+      <div class="mockup-body">
+        <div class="dock-row">
+          <div class="dock-card"><div class="name">Discord</div><div class="sub">≤ 25 MB</div></div>
+          <div class="dock-card"><div class="name">Email</div><div class="sub">≤ 25 MB</div></div>
+          <div class="dock-card"><div class="name">YouTube</div><div class="sub">Quality</div></div>
+          <div class="dock-card"><div class="name">Web / Social</div><div class="sub">1080p</div></div>
+          <div class="dock-card"><div class="name">Custom</div><div class="sub">Your rules</div></div>
+        </div>
+        <div class="file-rows">
+          <div class="file-row">
+            <div class="file-top"><span class="file-name">conference-recording.mov</span><span class="file-stat">480 MB → 61 MB (−87%)</span></div>
+            <div class="shrink-bar"><div class="fill" style="width:13%"></div></div>
+          </div>
+          <div class="file-row">
+            <div class="file-top"><span class="file-name">family-trip-4k.mp4</span><span class="file-stat">1.1 GB → 460 MB (−58%)</span></div>
+            <div class="shrink-bar"><div class="fill" style="width:42%"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="cta">
       <!-- Pre-launch: waitlist. At launch: swap for download + buy buttons. -->
       <form action="https://buttondown.email/api/emails/embed-subscribe/REPLACE-AT-LAUNCH" method="post">
         <input type="email" name="email" placeholder="you@email.com" aria-label="Email address" required>
         <button type="submit">Get 35% off at launch</button>
       </form>
+      <p class="fineprint">7-day free trial when Dense ships. $19 launch price, $29 after.</p>
     </div>
-    <section class="proof">
-      <div><strong>480 MB → 32 MB</strong><span>4K screen recording, Discord preset</span></div>
-      <div><strong>100% offline</strong><span>your files never leave your Mac</span></div>
-      <div><strong>$19 launch price</strong><span>one-time. no subscription. 7-day free trial</span></div>
+
+    <section class="proof" aria-label="Real compression results">
+      <div><strong>419 KB → 143 KB</strong><span>4-page mixed PDF, −66%</span></div>
+      <div><strong>up to −89%</strong><span>image-heavy PDF, by quality tier</span></div>
+      <div><strong>−51%</strong><span>1080p video, Small preset</span></div>
     </section>
-    <footer>
-      <p>macOS 13+ · Apple Silicon &amp; Intel · Uses <a href="https://ffmpeg.org">FFmpeg</a> under the GPL as a separate process (<a href="https://evermeet.cx/ffmpeg/">build sources</a>).</p>
-    </footer>
   </main>
+
+  <section id="features">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Shipped today</span>
+        <h2>Everything you drag in, everything gets smaller</h2>
+        <p>Nine ways Dense shrinks files, all running locally on your Mac.</p>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <span class="icon">🎬</span>
+          <h3>Video compression</h3>
+          <p>H.264 or HEVC, MOV output, hardware-accelerated with VideoToolbox — fast even on big 4K files.</p>
+        </div>
+        <div class="card">
+          <span class="icon">🎯</span>
+          <h3>Target-size mode</h3>
+          <p>Tell Dense a size in MB and it works backward to hit it — perfect for upload limits.</p>
+        </div>
+        <div class="card">
+          <span class="icon">🖥️</span>
+          <h3>Resolution &amp; audio controls</h3>
+          <p>Cap output to 4K, 1080p, or 720p, or strip the audio track entirely.</p>
+        </div>
+        <div class="card">
+          <span class="icon">🖼️</span>
+          <h3>Image compression</h3>
+          <p>JPEG, PNG, HEIC, TIFF, WebP and BMP — with EXIF, GPS, and capture date preserved.</p>
+        </div>
+        <div class="card">
+          <span class="icon">🌀</span>
+          <h3>GIF optimization</h3>
+          <p>Re-palettize and resize existing GIFs so they load fast without looking muddy.</p>
+        </div>
+        <div class="card">
+          <span class="icon">🔁</span>
+          <h3>Video → GIF</h3>
+          <p>Turn a clip into a shareable GIF in one drop, no separate converter needed.</p>
+        </div>
+        <div class="card">
+          <span class="icon">🎵</span>
+          <h3>Extract MP3</h3>
+          <p>Pull the audio track out of any video as MP3, falling back to AAC automatically.</p>
+        </div>
+        <div class="card">
+          <span class="icon">📄</span>
+          <h3>PDF compression</h3>
+          <p>Native Quartz engine — no Ghostscript install required, and text stays selectable.</p>
+        </div>
+        <div class="card">
+          <span class="icon">📦</span>
+          <h3>Batch queue</h3>
+          <p>Drop a folder at once. Each file compresses in isolation with real cancellation, plus Trash cleanup, custom output folders, suffixes, and Sparkle auto-updates.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="coming-soon-head">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">On the roadmap</span>
+        <h2 id="coming-soon-head">Coming soon</h2>
+        <p>Not in the first release — tracked and in progress. Nothing here ships until it's real.</p>
+      </div>
+      <div class="grid">
+        <div class="card"><span class="badge badge-soon">Coming soon</span><h3>VP9 &amp; extra controls</h3><p>VP9 output, plus FPS, CPU-core, and metadata-stripping options.</p></div>
+        <div class="card"><span class="badge badge-soon">Coming soon</span><h3>Folder monitoring</h3><p>Point Dense at a folder and it compresses anything new automatically.</p></div>
+        <div class="card"><span class="badge badge-soon">Coming soon</span><h3>Floating drop zone</h3><p>A small always-on-top drop target that lives above every other window.</p></div>
+        <div class="card"><span class="badge badge-soon">Coming soon</span><h3>dense:// deep links</h3><p>Trigger compression jobs from other apps or shortcuts.</p></div>
+        <div class="card"><span class="badge badge-soon">Coming soon</span><h3>Local HTTP API</h3><p>Automate Dense from scripts over a loopback, token-authenticated endpoint.</p></div>
+        <div class="card"><span class="badge badge-soon">Coming soon</span><h3>Raycast extension</h3><p>Compress files straight from Raycast without opening the app.</p></div>
+        <div class="card"><span class="badge badge-soon">Coming soon</span><h3>AI smart-rename</h3><p>On-device suggestions for clearer output filenames.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="how-head">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">How it works</span>
+        <h2 id="how-head">Three steps, no settings required</h2>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="num">1</div>
+          <h3>Drop your files</h3>
+          <p>Drag one file or a whole folder onto the Dense window.</p>
+        </div>
+        <div class="step">
+          <div class="num">2</div>
+          <h3>Pick a destination</h3>
+          <p>Discord, Email, YouTube, Web/Social, or a fully custom preset.</p>
+        </div>
+        <div class="step">
+          <div class="num">3</div>
+          <h3>Watch it shrink</h3>
+          <p>Each row's bar visibly shrinks as compression runs — cancel anytime.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="privacy-head">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Privacy</span>
+        <h2 id="privacy-head">Your files never leave your Mac</h2>
+        <p>Dense compresses everything locally — no upload, no cloud processing, no waiting on someone else's server. The one exception: contacting the license server to activate your purchase.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="pricing-teaser-head">
+    <div class="wrap section-head">
+      <span class="eyebrow">Pricing</span>
+      <h2 id="pricing-teaser-head">$29 once. $19 at launch. Never again.</h2>
+      <p>No subscription, no recurring charge. Try every feature free for 7 days.</p>
+      <p style="margin-top:20px;"><a href="pricing.html" class="btn-download" style="text-decoration:none;">See pricing →</a></p>
+    </div>
+  </section>
+
+  <section aria-labelledby="faq-head">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">FAQ</span>
+        <h2 id="faq-head">Questions people actually ask</h2>
+      </div>
+      <div class="faq">
+        <details>
+          <summary>Is there a free trial?</summary>
+          <p>Yes — every feature is unlocked for 7 days, no credit card required. After that, a one-time license removes the trial banner for good.</p>
+        </details>
+        <details>
+          <summary>Does Dense need an internet connection?</summary>
+          <p>No. Compression runs entirely on your Mac. The only time Dense talks to the network is to activate your license after purchase.</p>
+        </details>
+        <details>
+          <summary>What file formats can Dense compress?</summary>
+          <p>Video: MOV, and common containers Dense re-encodes to H.264/HEVC MOV. Images: JPEG, PNG, HEIC, TIFF, WebP, BMP. Plus GIF optimization, video-to-GIF, MP3 audio extraction, and PDF compression.</p>
+        </details>
+        <details>
+          <summary>Can Dense compress password-protected PDFs?</summary>
+          <p>Not yet — password-protected PDFs are currently unsupported and Dense will tell you clearly rather than fail silently.</p>
+        </details>
+        <details>
+          <summary>What's the refund policy?</summary>
+          <!-- REFUND-POLICY-TBD: confirm exact refund window/terms before launch -->
+          <p>Refunds are available within a reasonable window of purchase if Dense doesn't work for you — details finalized at launch.</p>
+        </details>
+        <details>
+          <summary>Does it work on Apple Silicon and Intel Macs?</summary>
+          <p>Yes. Dense ships as a universal binary and runs natively on both, requiring macOS 13 or later.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>macOS 13+ · Apple Silicon &amp; Intel. Dense uses <a href="https://ffmpeg.org">FFmpeg</a> under the GPL, run as a separate process — build sources: <a href="https://evermeet.cx/ffmpeg/">evermeet.cx (x86_64)</a> and <a href="https://osxexperts.net">osxexperts.net (arm64)</a>.</p>
+      <p>&copy; 2026 Lê Anh Vũ. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="nav.js"></script>
 </body>
 </html>

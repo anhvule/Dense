@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Changelog — Dense</title>
+  <meta name="description" content="What's new in Dense, release by release.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-nav">
+    <div class="nav-inner">
+      <a href="index.html" class="logo">Dense</a>
+      <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+      <nav class="nav-links">
+        <a href="index.html#features">Features</a>
+        <a href="pricing.html">Pricing</a>
+        <a href="docs/index.html">Docs</a>
+        <a href="changelog.html">Changelog</a>
+        <a href="#" class="btn-download"><!-- REPLACE-AT-LAUNCH: link to signed DMG --> Download</a>
+      </nav>
+    </div>
+  </header>
+
+  <main style="max-width:720px; text-align:left;">
+    <span class="eyebrow">Changelog</span>
+    <h1 style="font-size:clamp(1.8rem,5vw,2.4rem);">What's new in Dense</h1>
+    <p class="sub" style="margin-bottom:40px;">Every release, in plain language.</p>
+
+    <article style="margin-bottom:40px;">
+      <h2 style="font-size:1.3rem; margin-bottom:4px;">v1.0.0 <span style="color:var(--muted); font-weight:400; font-size:.9rem;">— 2026-07-10</span></h2>
+      <p style="color:var(--muted); margin-bottom:14px;">First public release.</p>
+      <ul style="display:flex; flex-direction:column; gap:8px;">
+        <li>Video compression to H.264 or HEVC MOV, hardware-accelerated with VideoToolbox</li>
+        <li>Target-size mode — compress to a specific MB ceiling</li>
+        <li>Resolution caps (4K/1080p/720p) and audio removal</li>
+        <li>Destination-dock presets: Discord, Email, YouTube, Web/Social, and a fully custom preset</li>
+        <li>Image compression for JPEG, PNG, HEIC, TIFF, WebP, and BMP with EXIF preserved</li>
+        <li>GIF optimization for existing GIFs, and one-drop video-to-GIF conversion</li>
+        <li>Extract MP3 audio from any video, falling back to AAC automatically</li>
+        <li>PDF compression on Apple's native Quartz engine — no Ghostscript install, text stays selectable</li>
+        <li>Batch queue with per-file isolation and real cancellation</li>
+        <li>Move-originals-to-Trash option, custom output folder and filename suffix</li>
+        <li>Sparkle auto-updates</li>
+        <li>7-day full-feature trial; one-time license, no subscription</li>
+      </ul>
+    </article>
+
+    <article>
+      <h2 style="font-size:1.3rem; margin-bottom:4px;">Unreleased <span style="color:var(--muted); font-weight:400; font-size:.9rem;">— on the roadmap</span></h2>
+      <p style="color:var(--muted); margin-bottom:14px;">Planned, not shipped yet. Dates aren't set.</p>
+      <ul style="display:flex; flex-direction:column; gap:8px;">
+        <li><span class="badge badge-soon" style="margin-right:8px;">Coming soon</span>VP9 output</li>
+        <li><span class="badge badge-soon" style="margin-right:8px;">Coming soon</span>FPS, CPU-core, and metadata-stripping controls</li>
+        <li><span class="badge badge-soon" style="margin-right:8px;">Coming soon</span>Folder monitoring for hands-off compression</li>
+        <li><span class="badge badge-soon" style="margin-right:8px;">Coming soon</span>Floating always-on-top drop zone</li>
+        <li><span class="badge badge-soon" style="margin-right:8px;">Coming soon</span><code>dense://</code> deep links</li>
+        <li><span class="badge badge-soon" style="margin-right:8px;">Coming soon</span>Local HTTP API for scripting</li>
+        <li><span class="badge badge-soon" style="margin-right:8px;">Coming soon</span>Raycast extension</li>
+        <li><span class="badge badge-soon" style="margin-right:8px;">Coming soon</span>On-device AI smart-rename</li>
+      </ul>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>macOS 13+ · Apple Silicon &amp; Intel. Dense uses <a href="https://ffmpeg.org">FFmpeg</a> under the GPL, run as a separate process — build sources: <a href="https://evermeet.cx/ffmpeg/">evermeet.cx (x86_64)</a> and <a href="https://osxexperts.net">osxexperts.net (arm64)</a>.</p>
+      <p>&copy; 2026 Lê Anh Vũ. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="nav.js"></script>
+</body>
+</html>

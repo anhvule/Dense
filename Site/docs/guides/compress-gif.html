@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Compress a GIF — Dense Docs</title>
+  <meta name="description" content="Shrink an existing GIF's file size with Dense without breaking the loop.">
+  <link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+  <header class="site-nav">
+    <div class="nav-inner">
+      <a href="../../index.html" class="logo">Dense</a>
+      <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+      <nav class="nav-links">
+        <a href="../../index.html#features">Features</a>
+        <a href="../../pricing.html">Pricing</a>
+        <a href="../index.html">Docs</a>
+        <a href="../../changelog.html">Changelog</a>
+        <a href="#" class="btn-download"><!-- REPLACE-AT-LAUNCH: link to signed DMG --> Download</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar">
+      <h4>Guides</h4>
+      <ul>
+        <li><a href="getting-started.html">Getting Started</a></li>
+        <li><a href="compress-video.html">Compress a Video</a></li>
+        <li><a href="compress-image.html">Compress an Image</a></li>
+        <li><a href="compress-gif.html" class="active">Compress a GIF</a></li>
+        <li><a href="video-to-gif.html">Video to GIF</a></li>
+        <li><a href="extract-mp3.html">Extract MP3</a></li>
+        <li><a href="compress-pdf.html">Compress a PDF</a></li>
+      </ul>
+      <h4>Coming Soon</h4>
+      <ul>
+        <li><a href="folder-monitoring.html">Folder Monitoring <span class="soon-tag">Soon</span></a></li>
+        <li><a href="drop-zone.html">Floating Drop Zone <span class="soon-tag">Soon</span></a></li>
+        <li><a href="deep-linking.html">Deep Linking <span class="soon-tag">Soon</span></a></li>
+        <li><a href="http-api.html">HTTP API <span class="soon-tag">Soon</span></a></li>
+        <li><a href="raycast.html">Raycast Extension <span class="soon-tag">Soon</span></a></li>
+      </ul>
+    </aside>
+
+    <div class="docs-content">
+      <h1>Compress a GIF</h1>
+      <p class="lede">Already have a GIF that's too big to share? Drop it on Dense to re-palettize and, if needed, shrink its width.</p>
+
+      <h2>What it does</h2>
+      <p>Dense re-encodes the GIF's color palette to cut file size while keeping the same frame timing and loop — it doesn't force a new frame rate on an existing GIF, only a video-to-GIF conversion does that (see <a href="video-to-gif.html">Video to GIF</a>).</p>
+
+      <h2>Advanced panel options</h2>
+      <ul>
+        <li><strong>width</strong> — a stepper from 240 to 960 in steps of 80, default 480. If your GIF is wider than this, Dense rescales it down; narrower GIFs are left at their original width.</li>
+      </ul>
+
+      <div class="tip">Re-palettization alone often cuts a chunky screen-recording GIF down significantly — try it before touching the width.</div>
+
+      <h2>Output location, suffix, and cleanup</h2>
+      <p>Same shared options as every other file type: <strong>Output</strong> (<code>Next to original</code> or a <code>Custom folder</code>), <strong>Suffix</strong> (default <code>-compressed</code>), and <strong>Move to Trash after success</strong>.</p>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>macOS 13+ · Apple Silicon &amp; Intel. Dense uses <a href="https://ffmpeg.org">FFmpeg</a> under the GPL, run as a separate process — build sources: <a href="https://evermeet.cx/ffmpeg/">evermeet.cx (x86_64)</a> and <a href="https://osxexperts.net">osxexperts.net (arm64)</a>.</p>
+      <p>&copy; 2026 Lê Anh Vũ. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="../../nav.js"></script>
+</body>
+</html>

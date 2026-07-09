@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Video to GIF — Dense Docs</title>
+  <meta name="description" content="Turn a video clip into a shareable GIF with Dense.">
+  <link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+  <header class="site-nav">
+    <div class="nav-inner">
+      <a href="../../index.html" class="logo">Dense</a>
+      <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+      <nav class="nav-links">
+        <a href="../../index.html#features">Features</a>
+        <a href="../../pricing.html">Pricing</a>
+        <a href="../index.html">Docs</a>
+        <a href="../../changelog.html">Changelog</a>
+        <a href="#" class="btn-download"><!-- REPLACE-AT-LAUNCH: link to signed DMG --> Download</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar">
+      <h4>Guides</h4>
+      <ul>
+        <li><a href="getting-started.html">Getting Started</a></li>
+        <li><a href="compress-video.html">Compress a Video</a></li>
+        <li><a href="compress-image.html">Compress an Image</a></li>
+        <li><a href="compress-gif.html">Compress a GIF</a></li>
+        <li><a href="video-to-gif.html" class="active">Video to GIF</a></li>
+        <li><a href="extract-mp3.html">Extract MP3</a></li>
+        <li><a href="compress-pdf.html">Compress a PDF</a></li>
+      </ul>
+      <h4>Coming Soon</h4>
+      <ul>
+        <li><a href="folder-monitoring.html">Folder Monitoring <span class="soon-tag">Soon</span></a></li>
+        <li><a href="drop-zone.html">Floating Drop Zone <span class="soon-tag">Soon</span></a></li>
+        <li><a href="deep-linking.html">Deep Linking <span class="soon-tag">Soon</span></a></li>
+        <li><a href="http-api.html">HTTP API <span class="soon-tag">Soon</span></a></li>
+        <li><a href="raycast.html">Raycast Extension <span class="soon-tag">Soon</span></a></li>
+      </ul>
+    </aside>
+
+    <div class="docs-content">
+      <h1>Video to GIF</h1>
+      <p class="lede">Convert a video clip straight into a GIF in one drop — no separate converter app needed.</p>
+
+      <h2>How it works</h2>
+      <p>Turn on <strong>GIF mode</strong> (<strong>Convert to GIF</strong>) in the advanced panel before dropping a video, or use the destination flow if it's exposed for your file. Dense runs a two-pass palette generation and application (palettegen/paletteuse under the hood) so the resulting GIF looks noticeably cleaner than a naive single-pass conversion.</p>
+
+      <h2>Advanced panel options</h2>
+      <ul>
+        <li><strong>fps</strong> — a stepper from 5 to 30, default 12. Lower values shrink file size further at the cost of smoothness.</li>
+        <li><strong>width</strong> — a stepper from 240 to 960 in steps of 80, default 480.</li>
+      </ul>
+
+      <div class="tip">Unlike re-compressing an existing GIF, video-to-GIF conversion always applies your chosen fps — it's generating new frames from the source video, not just re-palettizing what's already there.</div>
+
+      <h2>Output location, suffix, and cleanup</h2>
+      <p>The converted GIF follows the same shared options: <strong>Output</strong> (<code>Next to original</code> or a <code>Custom folder</code>), <strong>Suffix</strong> (default <code>-compressed</code>), and <strong>Move to Trash after success</strong> for the original video, if you want it gone.</p>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>macOS 13+ · Apple Silicon &amp; Intel. Dense uses <a href="https://ffmpeg.org">FFmpeg</a> under the GPL, run as a separate process — build sources: <a href="https://evermeet.cx/ffmpeg/">evermeet.cx (x86_64)</a> and <a href="https://osxexperts.net">osxexperts.net (arm64)</a>.</p>
+      <p>&copy; 2026 Lê Anh Vũ. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="../../nav.js"></script>
+</body>
+</html>

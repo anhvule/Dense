@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Extract MP3 — Dense Docs</title>
+  <meta name="description" content="Pull the audio track out of any video as MP3 (or AAC) with Dense.">
+  <link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+  <header class="site-nav">
+    <div class="nav-inner">
+      <a href="../../index.html" class="logo">Dense</a>
+      <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+      <nav class="nav-links">
+        <a href="../../index.html#features">Features</a>
+        <a href="../../pricing.html">Pricing</a>
+        <a href="../index.html">Docs</a>
+        <a href="../../changelog.html">Changelog</a>
+        <a href="#" class="btn-download"><!-- REPLACE-AT-LAUNCH: link to signed DMG --> Download</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar">
+      <h4>Guides</h4>
+      <ul>
+        <li><a href="getting-started.html">Getting Started</a></li>
+        <li><a href="compress-video.html">Compress a Video</a></li>
+        <li><a href="compress-image.html">Compress an Image</a></li>
+        <li><a href="compress-gif.html">Compress a GIF</a></li>
+        <li><a href="video-to-gif.html">Video to GIF</a></li>
+        <li><a href="extract-mp3.html" class="active">Extract MP3</a></li>
+        <li><a href="compress-pdf.html">Compress a PDF</a></li>
+      </ul>
+      <h4>Coming Soon</h4>
+      <ul>
+        <li><a href="folder-monitoring.html">Folder Monitoring <span class="soon-tag">Soon</span></a></li>
+        <li><a href="drop-zone.html">Floating Drop Zone <span class="soon-tag">Soon</span></a></li>
+        <li><a href="deep-linking.html">Deep Linking <span class="soon-tag">Soon</span></a></li>
+        <li><a href="http-api.html">HTTP API <span class="soon-tag">Soon</span></a></li>
+        <li><a href="raycast.html">Raycast Extension <span class="soon-tag">Soon</span></a></li>
+      </ul>
+    </aside>
+
+    <div class="docs-content">
+      <h1>Extract MP3</h1>
+      <p class="lede">Grab just the audio from a video — a voice memo buried in a screen recording, a podcast recorded on camera, whatever you need without the picture.</p>
+
+      <h2>How it works</h2>
+      <p>Right-click a video row in the queue and choose <strong>Extract audio</strong>. Dense pulls the audio track out as a standalone file.</p>
+
+      <h2>Format and fallback</h2>
+      <p>Dense extracts to MP3 when possible. If the bundled FFmpeg build doesn't support the MP3 encoder, it automatically falls back to AAC in an <code>.m4a</code> container instead — you always get a working audio file either way, no manual encoder switching required.</p>
+
+      <div class="tip">This works on any video Dense can open — you don't need to compress the video first to extract its audio.</div>
+
+      <h2>Output location, suffix, and cleanup</h2>
+      <p>The extracted audio file follows the same shared <strong>Output</strong> and <strong>Suffix</strong> settings as everything else, and the source video can be moved to the Trash with <strong>Move to Trash after success</strong> if you no longer need it.</p>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>macOS 13+ · Apple Silicon &amp; Intel. Dense uses <a href="https://ffmpeg.org">FFmpeg</a> under the GPL, run as a separate process — build sources: <a href="https://evermeet.cx/ffmpeg/">evermeet.cx (x86_64)</a> and <a href="https://osxexperts.net">osxexperts.net (arm64)</a>.</p>
+      <p>&copy; 2026 Lê Anh Vũ. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="../../nav.js"></script>
+</body>
+</html>

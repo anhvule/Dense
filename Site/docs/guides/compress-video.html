@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Compress a Video — Dense Docs</title>
+  <meta name="description" content="Destination presets, target-size mode, resolution caps, codecs, and the advanced panel — how to compress video with Dense.">
+  <link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+  <header class="site-nav">
+    <div class="nav-inner">
+      <a href="../../index.html" class="logo">Dense</a>
+      <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+      <nav class="nav-links">
+        <a href="../../index.html#features">Features</a>
+        <a href="../../pricing.html">Pricing</a>
+        <a href="../index.html">Docs</a>
+        <a href="../../changelog.html">Changelog</a>
+        <a href="#" class="btn-download"><!-- REPLACE-AT-LAUNCH: link to signed DMG --> Download</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar">
+      <h4>Guides</h4>
+      <ul>
+        <li><a href="getting-started.html">Getting Started</a></li>
+        <li><a href="compress-video.html" class="active">Compress a Video</a></li>
+        <li><a href="compress-image.html">Compress an Image</a></li>
+        <li><a href="compress-gif.html">Compress a GIF</a></li>
+        <li><a href="video-to-gif.html">Video to GIF</a></li>
+        <li><a href="extract-mp3.html">Extract MP3</a></li>
+        <li><a href="compress-pdf.html">Compress a PDF</a></li>
+      </ul>
+      <h4>Coming Soon</h4>
+      <ul>
+        <li><a href="folder-monitoring.html">Folder Monitoring <span class="soon-tag">Soon</span></a></li>
+        <li><a href="drop-zone.html">Floating Drop Zone <span class="soon-tag">Soon</span></a></li>
+        <li><a href="deep-linking.html">Deep Linking <span class="soon-tag">Soon</span></a></li>
+        <li><a href="http-api.html">HTTP API <span class="soon-tag">Soon</span></a></li>
+        <li><a href="raycast.html">Raycast Extension <span class="soon-tag">Soon</span></a></li>
+      </ul>
+    </aside>
+
+    <div class="docs-content">
+      <h1>Compress a Video</h1>
+      <p class="lede">Drop a video onto a destination card for a one-click result, or open the advanced panel for full control.</p>
+
+      <h2>The fast way: destination cards</h2>
+      <p>Drag a video directly onto one of the five dock cards:</p>
+      <ul>
+        <li><strong>Discord</strong> — caps output at 25 MB, 1080p max, 8 Mbps.</li>
+        <li><strong>Email</strong> — caps output at 25 MB, 1080p max, 8 Mbps.</li>
+        <li><strong>YouTube</strong> — no size cap, 4K (2160p) max, 20 Mbps for upload-quality output.</li>
+        <li><strong>Web / Social</strong> — 1080p max, 5 Mbps, no hard size cap.</li>
+        <li><strong>Custom</strong> — starts from a balanced 1080p / 5 Mbps baseline that you can override completely in the advanced panel.</li>
+      </ul>
+
+      <h2>Target-size mode</h2>
+      <p>Open the advanced panel and set <strong>Target size</strong> to a number of megabytes — leave it on its <code>auto</code> placeholder and Dense uses the preset's own bitrate cap instead. When you fill it in, Dense works backward from that ceiling to pick a bitrate that lands under it.</p>
+
+      <h2>Resolution &amp; format</h2>
+      <p>The <strong>Resolution</strong> picker offers <code>Preset default</code>, <code>Same as input</code>, <code>4K (2160p)</code>, <code>1080p</code>, and <code>720p</code>. The <strong>Format</strong> picker offers <code>MP4 · H.264</code>, <code>MP4 · HEVC</code>, and <code>MOV</code> (MOV output is encoded with H.264).</p>
+
+      <h2>Remove audio</h2>
+      <p>Toggle <strong>Remove audio</strong> in the advanced panel to strip the audio track entirely — useful for silent background loops or screen recordings nobody needs to hear.</p>
+
+      <h2>Output location, suffix, and cleanup</h2>
+      <ul>
+        <li><strong>Output</strong>: choose <code>Next to original</code> or <code>Custom folder</code> (pick one with the <code>Change…</code> button; it shows <code>None chosen</code> until you do).</li>
+        <li><strong>Suffix</strong>: defaults to <code>-compressed</code>, appended to the output filename. Change it to whatever you like.</li>
+        <li><strong>Move to Trash after success</strong>: after a confirmation ("Move originals to Trash?"), moves the original to the Trash once compression succeeds. You can always put it back.</li>
+      </ul>
+
+      <div class="tip">Hardware acceleration via VideoToolbox means most 1080p clips compress in a fraction of their own runtime — 4K takes longer but still runs locally.</div>
+
+      <h2>Batches and cancellation</h2>
+      <p>Drop multiple files or a whole folder to queue them. Each file compresses in isolation, so one bad file doesn't stall the rest. Use <strong>Cancel all</strong> to stop the whole queue at any time — in-flight jobs stop immediately rather than finishing in the background.</p>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>macOS 13+ · Apple Silicon &amp; Intel. Dense uses <a href="https://ffmpeg.org">FFmpeg</a> under the GPL, run as a separate process — build sources: <a href="https://evermeet.cx/ffmpeg/">evermeet.cx (x86_64)</a> and <a href="https://osxexperts.net">osxexperts.net (arm64)</a>.</p>
+      <p>&copy; 2026 Lê Anh Vũ. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="../../nav.js"></script>
+</body>
+</html>
