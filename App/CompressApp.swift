@@ -1,9 +1,12 @@
 import SwiftUI
 import CompressCore
+import Sparkle
 
 @main
 struct CompressApp: App {
     @StateObject private var env = AppEnvironment()
+    private let updaterController = SPUStandardUpdaterController(
+        startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
 
     var body: some Scene {
         WindowGroup {
@@ -17,6 +20,11 @@ struct CompressApp: App {
                                 .font(.caption).padding(6)
                         }
                     }
+            }
+        }
+        .commands {
+            CommandGroup(after: .appInfo) {
+                Button("Check for Updates…") { updaterController.checkForUpdates(nil) }
             }
         }
         Settings { SettingsView().environmentObject(env) }

@@ -5,6 +5,9 @@ options:
 packages:
   CompressCore:
     path: CompressCore
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    majorVersion: 2.0.0
 targets:
   Compress:
     type: application
@@ -16,6 +19,7 @@ targets:
         buildPhase: resources
     dependencies:
       - package: CompressCore
+      - package: Sparkle
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.compress.mac
@@ -23,3 +27,15 @@ targets:
         ARCHS: "arm64 x86_64"
         ONLY_ACTIVE_ARCH: "NO"
         INFOPLIST_FILE: App/Info.plist
+        CODE_SIGN_ENTITLEMENTS: App/Compress.entitlements
+        ENABLE_HARDENED_RUNTIME: "YES"
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Compress
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        LSMinimumSystemVersion: "13.0"
+        NSHumanReadableCopyright: Uses FFmpeg (ffmpeg.org) under the (L)GPL, run as a separate process.
+        SUFeedURL: https://REPLACE-AT-LAUNCH.example/appcast.xml
+        SUPublicEDKey: REPLACE_WITH_generate_keys_OUTPUT
+        SUEnableAutomaticChecks: true
