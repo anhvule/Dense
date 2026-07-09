@@ -67,6 +67,39 @@ final class JobQueueTests: XCTestCase {
             .contains("125"))
     }
 
+    func testCancelAllNeverShowsRawFfmpegFailureMessage() async throws {
+        let queue = try makeQueue()
+        queue.maxConcurrent = 2
+        // Three real-encode jobs: two start running immediately (maxConcurrent
+        // = 2), one stays queued. cancelAll() is called synchronously right
+        // after add(), before this MainActor test body ever suspends, so the
+        // still-queued job is guaranteed to be cancelled pre-start; the two
+        // running ones get SIGTERMed mid-encode (FFmpegRunner's cancellation
+        // handler races that exactly, either surfacing as a thrown
+        // CancellationError or as ffmpeg exiting non-zero from the signal —
+        // either way Task.isCancelled stays true for the whole execute() call,
+        // which is what JobQueue.execute's catch now keys off).
+        queue.add(urls: [fixtureURL("clip-8s-1080p.mp4"), fixtureURL("clip-8s-1080p.mp4"),
+                         fixtureURL("clip-8s-1080p.mp4")],
+                  kind: .compress, options: .init(preset: .small),
+                  outputDir: FileManager.default.temporaryDirectory)
+        queue.cancelAll()
+        await waitUntilIdle(queue)
+        for job in queue.jobs {
+            if case .failed(let message) = job.status {
+                XCTAssertFalse(message.hasPrefix("Compression failed:"),
+                                "cancelled job leaked a raw ffmpeg message: \(message)")
+            }
+        }
+        // The job that never left `pending` is cancelled synchronously and
+        // deterministically shows "Cancelled".
+        if case .failed(let message) = queue.jobs[2].status {
+            XCTAssertEqual(message, "Cancelled")
+        } else {
+            XCTFail("expected the still-queued job to be cancelled, got \(queue.jobs[2].status)")
+        }
+    }
+
     @MainActor
     func testTrashOriginalOnSuccess() async throws {
         let queue = try makeQueue()

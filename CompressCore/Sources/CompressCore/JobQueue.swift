@@ -111,7 +111,11 @@ public final class JobQueue: ObservableObject {
         } catch CompressError.outputNotSmaller {
             job.status = .skippedAlreadyOptimized
         } catch {
-            job.status = .failed(message: Self.message(for: error))
+            if Task.isCancelled || error is CancellationError {
+                job.status = .failed(message: "Cancelled")
+            } else {
+                job.status = .failed(message: Self.message(for: error))
+            }
         }
     }
 }
