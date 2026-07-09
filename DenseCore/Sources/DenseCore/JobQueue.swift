@@ -1,6 +1,6 @@
 import Foundation
 
-public enum JobKind: Equatable { case compress, gif }
+public enum JobKind: Equatable { case compress, gif, image }
 
 public enum JobStatus: Equatable {
     case queued
@@ -21,28 +21,32 @@ public final class Job: ObservableObject, Identifiable {
 
 @MainActor
 public final class JobQueue: ObservableObject {
-    public static let videoExtensions = ["mp4","mov","m4v","avi","mkv","webm","flv","wmv","mts","m2ts"]
+    @available(*, deprecated, message: "Use FileKind.videoExtensions")
+    public static let videoExtensions = FileKind.videoExtensions
 
     @Published public private(set) var jobs: [Job] = []
     public var maxConcurrent = 2
 
     private let compressor: VideoCompressor
     private let gifConverter: GIFConverter
+    private let imageCompressor: ImageCompressor
     private var running = 0
-    private var pending: [(Job, CompressionOptions, URL?, GIFOptions, Bool)] = []
+    private var pending: [(Job, CompressionOptions, URL?, GIFOptions, ImageOptions, Bool)] = []
     private var tasks: [UUID: Task<Void, Never>] = [:]
 
-    public init(compressor: VideoCompressor, gifConverter: GIFConverter) {
+    public init(compressor: VideoCompressor, gifConverter: GIFConverter, imageCompressor: ImageCompressor) {
         self.compressor = compressor
         self.gifConverter = gifConverter
+        self.imageCompressor = imageCompressor
     }
 
     public func add(urls: [URL], kind: JobKind, options: CompressionOptions, outputDir: URL?,
-                    gifOptions: GIFOptions = GIFOptions(), trashOriginalOnSuccess: Bool = false) {
+                    gifOptions: GIFOptions = GIFOptions(), imageOptions: ImageOptions = ImageOptions(),
+                    trashOriginalOnSuccess: Bool = false) {
         for url in urls {
             let job = Job(input: url, kind: kind)
             jobs.append(job)
-            pending.append((job, options, outputDir, gifOptions, trashOriginalOnSuccess))
+            pending.append((job, options, outputDir, gifOptions, imageOptions, trashOriginalOnSuccess))
         }
         pump()
     }
@@ -72,12 +76,12 @@ public final class JobQueue: ObservableObject {
 
     private func pump() {
         while running < maxConcurrent, !pending.isEmpty {
-            let (job, options, outputDir, gifOptions, trashOriginalOnSuccess) = pending.removeFirst()
+            let (job, options, outputDir, gifOptions, imageOptions, trashOriginalOnSuccess) = pending.removeFirst()
             running += 1
             job.status = .running(progress: 0)
             let task = Task { [weak self] in
-                await self?.execute(job: job, options: options, outputDir: outputDir,
-                                    gifOptions: gifOptions, trashOriginalOnSuccess: trashOriginalOnSuccess)
+                await self?.execute(job: job, options: options, outputDir: outputDir, gifOptions: gifOptions,
+                                    imageOptions: imageOptions, trashOriginalOnSuccess: trashOriginalOnSuccess)
                 await MainActor.run { [weak self] in
                     guard let self else { return }
                     self.running -= 1
@@ -89,8 +93,8 @@ public final class JobQueue: ObservableObject {
         }
     }
 
-    private func execute(job: Job, options: CompressionOptions, outputDir: URL?,
-                         gifOptions: GIFOptions, trashOriginalOnSuccess: Bool) async {
+    private func execute(job: Job, options: CompressionOptions, outputDir: URL?, gifOptions: GIFOptions,
+                         imageOptions: ImageOptions, trashOriginalOnSuccess: Bool) async {
         let onProgress: (Double) -> Void = { p in
             Task { @MainActor in job.status = .running(progress: p) }
         }
@@ -103,6 +107,9 @@ public final class JobQueue: ObservableObject {
             case .gif:
                 result = try await gifConverter.convert(input: job.input, options: gifOptions,
                                                         outputDir: outputDir, progress: onProgress)
+            case .image:
+                result = try await imageCompressor.compress(input: job.input, options: imageOptions,
+                                                            outputDir: outputDir, suffix: options.outputSuffix)
             }
             job.status = .done(result)
             if trashOriginalOnSuccess, job.kind == .compress {

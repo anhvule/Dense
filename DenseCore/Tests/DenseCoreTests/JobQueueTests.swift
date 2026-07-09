@@ -7,7 +7,8 @@ final class JobQueueTests: XCTestCase {
         let ffmpeg = try XCTUnwrap(FFmpegRunner.locateTool(named: "ffmpeg"))
         let ffprobe = try XCTUnwrap(FFmpegRunner.locateTool(named: "ffprobe"))
         return JobQueue(compressor: VideoCompressor(ffmpegURL: ffmpeg, ffprobeURL: ffprobe),
-                        gifConverter: GIFConverter(ffmpegURL: ffmpeg, ffprobeURL: ffprobe))
+                        gifConverter: GIFConverter(ffmpegURL: ffmpeg, ffprobeURL: ffprobe),
+                        imageCompressor: ImageCompressor(ffmpegURL: ffmpeg))
     }
     func fixtureURL(_ name: String) -> URL {
         var dir = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
