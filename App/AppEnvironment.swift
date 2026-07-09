@@ -9,11 +9,41 @@ final class AppEnvironment: ObservableObject {
     @AppStorage("defaultPreset") var defaultPresetRaw: String = Preset.balanced.rawValue
     @AppStorage("useHEVC") var useHEVC: Bool = false
     @AppStorage("gifMode") var gifMode: Bool = false
+
+    @AppStorage("containerRaw") var containerRaw: String = "mp4"
+    @AppStorage("resolutionCapRaw") var resolutionCapRaw: String = ""
+    @AppStorage("removeAudio") var removeAudio: Bool = false
+    @AppStorage("customTargetMBText") var customTargetMBText: String = ""
+    @AppStorage("outputToCustomFolder") var outputToCustomFolder: Bool = false
+    @AppStorage("customOutputPath") var customOutputPath: String = ""
+    @AppStorage("outputSuffix") var outputSuffix: String = "-compressed"
+    @AppStorage("trashOriginals") var trashOriginals: Bool = false
+    @AppStorage("gifFps") var gifFps: Int = 12
+    @AppStorage("gifWidth") var gifWidth: Int = 480
+    @AppStorage("didMigrateHEVCToContainer") private var didMigrateHEVCToContainer: Bool = false
+
     var defaultPreset: Preset {
         get { Preset(rawValue: defaultPresetRaw) ?? .balanced }
         set { defaultPresetRaw = newValue.rawValue }
     }
-    var options: CompressionOptions { CompressionOptions(preset: defaultPreset, useHEVC: useHEVC) }
+
+    var options: CompressionOptions {
+        var opts = CompressionOptions(preset: defaultPreset)
+        opts.useHEVC = containerRaw == "mp4-hevc"
+        opts.container = containerRaw == "mov" ? .mov : .mp4
+        opts.removeAudio = removeAudio
+        opts.resolutionCap = ResolutionCap(rawValue: resolutionCapRaw)
+        opts.customTargetMB = Double(customTargetMBText)
+        opts.outputSuffix = outputSuffix.isEmpty ? "-compressed" : outputSuffix
+        return opts
+    }
+
+    var outputDir: URL? {
+        guard outputToCustomFolder, !customOutputPath.isEmpty else { return nil }
+        return URL(fileURLWithPath: customOutputPath, isDirectory: true)
+    }
+
+    var gifOptions: GIFOptions { GIFOptions(fps: gifFps, maxWidth: gifWidth) }
 
     init() {
         guard let ffmpeg = FFmpegRunner.locateTool(named: "ffmpeg"),
@@ -23,6 +53,14 @@ final class AppEnvironment: ObservableObject {
         queue = JobQueue(compressor: VideoCompressor(ffmpegURL: ffmpeg, ffprobeURL: ffprobe),
                          gifConverter: GIFConverter(ffmpegURL: ffmpeg, ffprobeURL: ffprobe))
         licenseStatus = licenseState.status()
+        // One-time migration: fold the legacy standalone HEVC toggle into the
+        // new container picker so users who had it on don't silently lose it.
+        // Gated on a dedicated flag (not just `containerRaw == "mp4"`) so it
+        // never re-fires if the user later picks "mp4" again on purpose.
+        if !didMigrateHEVCToContainer {
+            if useHEVC && containerRaw == "mp4" { containerRaw = "mp4-hevc" }
+            didMigrateHEVCToContainer = true
+        }
         Task { await revalidateLicense() }
     }
 
@@ -52,7 +90,8 @@ final class AppEnvironment: ObservableObject {
         }
         var effective = options
         if let preset { effective.preset = preset; defaultPreset = preset }
-        queue.add(urls: videos, kind: gifMode ? .gif : .compress, options: effective, outputDir: nil)
+        queue.add(urls: videos, kind: gifMode ? .gif : .compress, options: effective,
+                  outputDir: outputDir, gifOptions: gifOptions, trashOriginalOnSuccess: trashOriginals)
         return videos.count
     }
 

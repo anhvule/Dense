@@ -10,8 +10,7 @@ struct SettingsView: View {
                 get: { env.defaultPreset }, set: { env.defaultPreset = $0 })) {
                 ForEach(Preset.allCases) { Text($0.displayName).tag($0) }
             }
-            Toggle("Use HEVC (smaller, needs newer players)", isOn: $env.useHEVC)
-            Text("Output is saved next to the original as *-compressed. Originals are never modified.")
+            Text("All encoding options live in the main window's advanced panel.")
                 .font(.caption).foregroundStyle(.secondary)
         }
         .padding(20)

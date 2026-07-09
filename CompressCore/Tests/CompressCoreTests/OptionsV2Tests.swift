@@ -60,4 +60,50 @@ final class OptionsV2Tests: XCTestCase {
         let a = args(opts)
         XCTAssertTrue(a.contains("aac"))
     }
+
+    // MARK: - Engine backstop: output must never resolve to the same path as the input.
+
+    private func fixtureURL(_ name: String) -> URL {
+        var dir = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        for _ in 0..<6 {
+            let c = dir.appendingPathComponent("Fixtures/\(name)")
+            if FileManager.default.fileExists(atPath: c.path) { return c }
+            dir.deleteLastPathComponent()
+        }
+        fatalError("fixture missing — run Scripts/make-fixtures.sh")
+    }
+
+    private func makeCompressor() throws -> VideoCompressor {
+        VideoCompressor(ffmpegURL: try XCTUnwrap(FFmpegRunner.locateTool(named: "ffmpeg")),
+                        ffprobeURL: try XCTUnwrap(FFmpegRunner.locateTool(named: "ffprobe")))
+    }
+
+    func testEmptySuffixWithNoOutputDirThrowsInsteadOfOverwritingOriginal() async throws {
+        // An empty suffix + mp4 input + no output dir would make the computed
+        // output path identical to the input path — i.e. compression would
+        // overwrite (and, given ffmpeg reads-while-writes, likely corrupt) the
+        // original. The engine must refuse before ever invoking ffmpeg.
+        let tmpDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tmpDir) }
+        let input = tmpDir.appendingPathComponent("x.mp4")
+        try FileManager.default.copyItem(at: fixtureURL("clip-2s.mp4"), to: input)
+
+        var opts = CompressionOptions(preset: .balanced)
+        opts.outputSuffix = ""
+
+        do {
+            _ = try await makeCompressor().compress(input: input, options: opts, outputDir: nil) { _ in }
+            XCTFail("expected the engine to refuse an output path equal to the input path")
+        } catch CompressError.ffmpegFailed(let exitCode, let lastLine) {
+            XCTAssertEqual(exitCode, -1)
+            XCTAssertEqual(lastLine, "Output would overwrite the original — change the suffix or output folder")
+        }
+
+        // Original must survive untouched.
+        XCTAssertTrue(FileManager.default.fileExists(atPath: input.path))
+        let size = (try? FileManager.default.attributesOfItem(atPath: input.path)[.size]) as? Int64
+        XCTAssertGreaterThan(size ?? 0, 0)
+    }
 }

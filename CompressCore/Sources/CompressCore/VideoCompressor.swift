@@ -35,6 +35,9 @@ public struct VideoCompressor {
             throw CompressError.unreachableTarget(closestMB: closest)
         }
         let output = Self.outputURL(for: input, outputDir: outputDir, options: options)
+        guard output.standardizedFileURL != input.standardizedFileURL else {
+            throw CompressError.ffmpegFailed(exitCode: -1, lastLine: "Output would overwrite the original — change the suffix or output folder")
+        }
         let args = FFmpegArguments.build(input: input, output: output, info: info, options: options)
         var lastLine = ""
         let code = try await ffmpeg.run(arguments: args) { line in

@@ -6,6 +6,7 @@ struct MainView: View {
     @EnvironmentObject var env: AppEnvironment
     @ObservedObject var queue: JobQueue
     @State private var dropRejected = false
+    @State private var showAdvanced = false
 
     var body: some View {
         VStack(spacing: 12) {
@@ -18,6 +19,7 @@ struct MainView: View {
                     dropRejected = accepted == 0 && !urls.isEmpty
                 }
             }
+            if showAdvanced { AdvancedPanelView().environmentObject(env) }
             if dropRejected {
                 Text("Images & PDFs coming soon — v1 is all about video.")
                     .font(.caption).foregroundStyle(.orange)
@@ -45,12 +47,33 @@ struct MainView: View {
     }
 
     private var header: some View {
-        HStack {
-            Text("Compress").font(.headline)
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Compress").font(.headline)
+                if !queue.jobs.isEmpty { Text(batchSummary).font(.caption).foregroundStyle(.secondary) }
+            }
             Spacer()
-            if !queue.jobs.isEmpty { Button("Clear") { queue.clearFinished() } }
+            if !queue.jobs.isEmpty {
+                Button("Cancel all") { queue.cancelAll() }
+                Button("Clear") { queue.clearFinished() }
+            }
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) { showAdvanced.toggle() }
+            } label: {
+                Image(systemName: showAdvanced ? "chevron.up" : "slider.horizontal.3")
+            }
+            .help("Advanced options")
         }
         .padding(.horizontal, 14)
+    }
+
+    private var batchSummary: String {
+        let done = queue.jobs.compactMap { if case .done(let r) = $0.status { return r } else { return nil } }
+        let inB = done.reduce(Int64(0)) { $0 + $1.inputBytes }
+        let outB = done.reduce(Int64(0)) { $0 + $1.outputBytes }
+        guard inB > 0 else { return "\(queue.jobs.count) file\(queue.jobs.count == 1 ? "" : "s")" }
+        let pct = Int((1 - Double(outB) / Double(inB)) * 100)
+        return "\(queue.jobs.count) files · saved \(ByteCountFormatter.string(fromByteCount: inB - outB, countStyle: .file)) (−\(pct)%)"
     }
 
     /// Loads dropped file URLs from NSItemProviders. The async bridge for
