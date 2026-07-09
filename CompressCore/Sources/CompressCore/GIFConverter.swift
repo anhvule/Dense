@@ -25,14 +25,17 @@ public struct GIFConverter {
         defer { try? FileManager.default.removeItem(at: palette) }
 
         let scale = "fps=\(options.fps),scale=\(options.maxWidth):-1:flags=lanczos"
+        var lastLine = ""
         // Pass 1: palette (counts as first half of progress)
         let code1 = try await ffmpeg.run(arguments:
             ["-y", "-i", input.path, "-vf", "\(scale),palettegen", palette.path]) { line in
+            lastLine = line
             if let f = ProgressParser.fraction(fromLine: line, duration: info.duration) { progress(f * 0.5) }
         }
-        guard code1 == 0 else { throw CompressError.ffmpegFailed(exitCode: code1, lastLine: "palettegen") }
+        guard code1 == 0 else {
+            throw CompressError.ffmpegFailed(exitCode: code1, lastLine: lastLine.isEmpty ? "palettegen failed" : lastLine)
+        }
         // Pass 2: encode
-        var lastLine = ""
         let code2 = try await ffmpeg.run(arguments:
             ["-y", "-i", input.path, "-i", palette.path,
              "-lavfi", "\(scale)[x];[x][1:v]paletteuse", output.path]) { line in
