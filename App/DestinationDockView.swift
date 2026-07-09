@@ -41,23 +41,30 @@ struct DestinationDockView: View {
 private struct DockCard: View {
     let card: DockPreset
     let isSelected: Bool
+    @State private var hovering = false
 
     var body: some View {
-        VStack(spacing: 5) {
-            Image(systemName: card.symbol).font(.system(size: 22))
-            Text(card.title).font(.system(size: 12, weight: .medium))
+        VStack(spacing: 6) {
+            Image(systemName: card.symbol)
+                .font(.system(size: 24, weight: .medium))
+                .symbolRenderingMode(.hierarchical)
+            Text(card.title).font(.system(size: 12, weight: .semibold))
             Text(card.subtitle).font(.system(size: 10)).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(isSelected ? Color.accentColor.opacity(0.14) : Color(nsColor: .controlBackgroundColor)))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(isSelected ? Color.accentColor : Color(nsColor: .separatorColor),
-                        lineWidth: isSelected ? 2 : 1))
-        .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
+        .padding(.vertical, 14)
+        .background(RoundedRectangle(cornerRadius: Theme.cardRadius)
+            .fill(isSelected ? AnyShapeStyle(Theme.accent.opacity(0.16)) : AnyShapeStyle(.regularMaterial)))
+        .overlay(RoundedRectangle(cornerRadius: Theme.cardRadius)
+            .strokeBorder(isSelected ? Theme.accent : Color.primary.opacity(0.08),
+                          lineWidth: isSelected ? 1.5 : 1))
+        .foregroundStyle(isSelected ? Theme.accent : Color.primary)
+        .shadow(color: isSelected ? Theme.accent.opacity(0.30) : .black.opacity(hovering ? 0.18 : 0),
+                radius: isSelected ? 10 : 8, y: 2)
+        .scaleEffect(hovering ? 1.03 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: hovering)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+        .onHover { hovering = $0 }
         .accessibilityLabel("\(card.title) preset\(isSelected ? ", selected" : "")")
     }
 }

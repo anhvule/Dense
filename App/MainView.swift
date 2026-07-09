@@ -34,7 +34,8 @@ struct MainView: View {
                 List(queue.jobs) { FileRowView(job: $0) }.listStyle(.inset)
             }
         }
-        .padding(.top, 12)
+        .padding(.top, 6)
+        .background(GlassBackground().ignoresSafeArea())
         .frame(minWidth: 640, minHeight: 460)
         .onDrop(of: [UTType.fileURL], isTargeted: nil) { providers in
             Task {
@@ -49,19 +50,23 @@ struct MainView: View {
     private var header: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 1) {
-                Text("Dense").font(.headline)
-                if !queue.jobs.isEmpty { Text(batchSummary).font(.caption).foregroundStyle(.secondary) }
+                Text("Dense").font(.system(size: 13, weight: .semibold)).foregroundStyle(.secondary)
+                if !queue.jobs.isEmpty {
+                    Text(batchSummary).font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                }
             }
             Spacer()
             if !queue.jobs.isEmpty {
-                Button("Cancel all") { queue.cancelAll() }
-                Button("Clear") { queue.clearFinished() }
+                Button("Cancel all") { queue.cancelAll() }.buttonStyle(.borderless)
+                Button("Clear") { queue.clearFinished() }.buttonStyle(.borderless)
             }
             Button {
                 withAnimation(.easeInOut(duration: 0.2)) { showAdvanced.toggle() }
             } label: {
                 Image(systemName: showAdvanced ? "chevron.up" : "slider.horizontal.3")
             }
+            .buttonStyle(.borderless)
+            .tint(Theme.accent)
             .help("Advanced options")
         }
         .padding(.horizontal, 14)
