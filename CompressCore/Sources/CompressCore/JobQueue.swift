@@ -29,7 +29,7 @@ public final class JobQueue: ObservableObject {
     private let compressor: VideoCompressor
     private let gifConverter: GIFConverter
     private var running = 0
-    private var pending: [(Job, CompressionOptions, URL?)] = []
+    private var pending: [(Job, CompressionOptions, URL?, GIFOptions, Bool)] = []
     private var tasks: [UUID: Task<Void, Never>] = [:]
 
     public init(compressor: VideoCompressor, gifConverter: GIFConverter) {
@@ -37,11 +37,12 @@ public final class JobQueue: ObservableObject {
         self.gifConverter = gifConverter
     }
 
-    public func add(urls: [URL], kind: JobKind, options: CompressionOptions, outputDir: URL?) {
+    public func add(urls: [URL], kind: JobKind, options: CompressionOptions, outputDir: URL?,
+                    gifOptions: GIFOptions = GIFOptions(), trashOriginalOnSuccess: Bool = false) {
         for url in urls {
             let job = Job(input: url, kind: kind)
             jobs.append(job)
-            pending.append((job, options, outputDir))
+            pending.append((job, options, outputDir, gifOptions, trashOriginalOnSuccess))
         }
         pump()
     }
@@ -71,11 +72,12 @@ public final class JobQueue: ObservableObject {
 
     private func pump() {
         while running < maxConcurrent, !pending.isEmpty {
-            let (job, options, outputDir) = pending.removeFirst()
+            let (job, options, outputDir, gifOptions, trashOriginalOnSuccess) = pending.removeFirst()
             running += 1
             job.status = .running(progress: 0)
             let task = Task { [weak self] in
-                await self?.execute(job: job, options: options, outputDir: outputDir)
+                await self?.execute(job: job, options: options, outputDir: outputDir,
+                                    gifOptions: gifOptions, trashOriginalOnSuccess: trashOriginalOnSuccess)
                 await MainActor.run { [weak self] in
                     guard let self else { return }
                     self.running -= 1
@@ -87,7 +89,8 @@ public final class JobQueue: ObservableObject {
         }
     }
 
-    private func execute(job: Job, options: CompressionOptions, outputDir: URL?) async {
+    private func execute(job: Job, options: CompressionOptions, outputDir: URL?,
+                         gifOptions: GIFOptions, trashOriginalOnSuccess: Bool) async {
         let onProgress: (Double) -> Void = { p in
             Task { @MainActor in job.status = .running(progress: p) }
         }
@@ -98,10 +101,13 @@ public final class JobQueue: ObservableObject {
                 result = try await compressor.compress(input: job.input, options: options,
                                                        outputDir: outputDir, progress: onProgress)
             case .gif:
-                result = try await gifConverter.convert(input: job.input, options: GIFOptions(),
+                result = try await gifConverter.convert(input: job.input, options: gifOptions,
                                                         outputDir: outputDir, progress: onProgress)
             }
             job.status = .done(result)
+            if trashOriginalOnSuccess, job.kind == .compress {
+                try? FileManager.default.trashItem(at: job.input, resultingItemURL: nil)
+            }
         } catch CompressError.outputNotSmaller {
             job.status = .skippedAlreadyOptimized
         } catch {

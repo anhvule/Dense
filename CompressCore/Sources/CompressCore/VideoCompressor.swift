@@ -22,11 +22,10 @@ public struct VideoCompressor {
         self.probe = MediaProbe(ffprobeURL: ffprobeURL)
     }
 
-    public static func outputURL(for input: URL, outputDir: URL?) -> URL {
+    public static func outputURL(for input: URL, outputDir: URL?, options: CompressionOptions) -> URL {
         let stem = input.deletingPathExtension().lastPathComponent
-        let ext = input.pathExtension.isEmpty ? "mp4" : input.pathExtension
         let dir = outputDir ?? input.deletingLastPathComponent()
-        return dir.appendingPathComponent("\(stem)-compressed.\(ext)")
+        return dir.appendingPathComponent("\(stem)\(options.outputSuffix).\(options.container.rawValue)")
     }
 
     public func compress(input: URL, options: CompressionOptions, outputDir: URL? = nil,
@@ -35,7 +34,7 @@ public struct VideoCompressor {
         if let closest = TargetFeasibility.closestAchievableMB(info: info, options: options) {
             throw CompressError.unreachableTarget(closestMB: closest)
         }
-        let output = Self.outputURL(for: input, outputDir: outputDir)
+        let output = Self.outputURL(for: input, outputDir: outputDir, options: options)
         let args = FFmpegArguments.build(input: input, output: output, info: info, options: options)
         var lastLine = ""
         let code = try await ffmpeg.run(arguments: args) { line in

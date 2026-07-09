@@ -66,4 +66,17 @@ final class JobQueueTests: XCTestCase {
         XCTAssertTrue(JobQueue.message(for: CompressError.unreachableTarget(closestMB: 125.1))
             .contains("125"))
     }
+
+    @MainActor
+    func testTrashOriginalOnSuccess() async throws {
+        let queue = try makeQueue()
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("trash-me-\(UUID().uuidString).mp4")
+        try FileManager.default.copyItem(at: fixtureURL("clip-8s-1080p.mp4"), to: tmp)
+        queue.add(urls: [tmp], kind: .compress, options: .init(preset: .small),
+                  outputDir: FileManager.default.temporaryDirectory, trashOriginalOnSuccess: true)
+        await waitUntilIdle(queue)
+        if case .done = queue.jobs[0].status {} else { XCTFail("expected done") }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: tmp.path), "original should be in Trash")
+    }
 }

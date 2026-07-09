@@ -31,8 +31,9 @@ final class VideoCompressorTests: XCTestCase {
     }
 
     func testOutputURLNaming() {
-        let out = VideoCompressor.outputURL(for: URL(fileURLWithPath: "/a/b/clip.mov"), outputDir: nil)
-        XCTAssertEqual(out.path, "/a/b/clip-compressed.mov")
+        let out = VideoCompressor.outputURL(for: URL(fileURLWithPath: "/a/b/clip.mov"), outputDir: nil,
+                                            options: .init(preset: .balanced))
+        XCTAssertEqual(out.path, "/a/b/clip-compressed.mp4")
     }
 
     func testUnreachableTargetThrowsBeforeEncoding() async throws {
