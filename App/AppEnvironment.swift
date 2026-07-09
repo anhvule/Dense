@@ -4,6 +4,8 @@ import CompressCore
 @MainActor
 final class AppEnvironment: ObservableObject {
     let queue: JobQueue
+    let licenseState = LicenseState(store: KeychainStore())
+    @Published var licenseStatus: LicenseStatus = .licensed
     @AppStorage("defaultPreset") var defaultPresetRaw: String = Preset.balanced.rawValue
     @AppStorage("useHEVC") var useHEVC: Bool = false
     @AppStorage("gifMode") var gifMode: Bool = false
@@ -20,6 +22,18 @@ final class AppEnvironment: ObservableObject {
         }
         queue = JobQueue(compressor: VideoCompressor(ffmpegURL: ffmpeg, ffprobeURL: ffprobe),
                          gifConverter: GIFConverter(ffmpegURL: ffmpeg, ffprobeURL: ffprobe))
+        licenseStatus = licenseState.status()
+        Task { await revalidateLicense() }
+    }
+
+    func refreshLicenseStatus() { licenseStatus = licenseState.status() }
+
+    func revalidateLicense() async {
+        guard let key = KeychainStore().string(forKey: "licenseKey"),
+              let inst = KeychainStore().string(forKey: "instanceID") else { return }
+        let ok = (try? await LicenseClient().validate(key: key, instanceID: inst)) ?? false
+        licenseState.recordValidation(succeeded: ok)
+        refreshLicenseStatus()
     }
 
     func handleDrop(urls: [URL]) -> Int {

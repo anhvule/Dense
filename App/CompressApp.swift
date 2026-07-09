@@ -7,7 +7,17 @@ struct CompressApp: App {
 
     var body: some Scene {
         WindowGroup {
-            MainView(queue: env.queue).environmentObject(env)
+            if case .trialExpired = env.licenseStatus {
+                LicenseGateView().environmentObject(env)
+            } else {
+                MainView(queue: env.queue).environmentObject(env)
+                    .overlay(alignment: .bottom) {
+                        if case .trial(let days) = env.licenseStatus {
+                            Text("Trial — \(days) day\(days == 1 ? "" : "s") left")
+                                .font(.caption).padding(6)
+                        }
+                    }
+            }
         }
         Settings { SettingsView().environmentObject(env) }
     }
