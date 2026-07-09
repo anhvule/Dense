@@ -24,6 +24,11 @@ struct MainView: View {
             }
             .padding(12)
 
+            if dropRejected && !queue.jobs.isEmpty {
+                Text("Images & PDFs coming soon — v1 is all about video.")
+                    .font(.caption).foregroundStyle(.orange).padding(.bottom, 4)
+            }
+
             if queue.jobs.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "arrow.down.doc").font(.system(size: 44))
