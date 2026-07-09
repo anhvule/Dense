@@ -19,7 +19,10 @@ struct MainView: View {
                     dropRejected = accepted == 0 && !urls.isEmpty
                 }
             }
-            if showAdvanced { AdvancedPanelView().environmentObject(env) }
+            if showAdvanced {
+                AdvancedPanelView().environmentObject(env)
+                WatchedFoldersView().environmentObject(env)
+            }
             if dropRejected {
                 Text("That file type isn't supported yet.")
                     .font(.caption.weight(.medium))

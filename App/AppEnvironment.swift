@@ -28,6 +28,9 @@ final class AppEnvironment: ObservableObject {
     /// 0 = Off (let ffmpeg pick); otherwise `CompressionOptions.threadLimit`.
     @AppStorage("threadLimitRaw") var threadLimitRaw: Int = 0
     @AppStorage("stripMetadata") var stripMetadata: Bool = false
+    @AppStorage("watchedFolders") var watchedFoldersJSON: String = "[]"
+
+    let folderWatcher = FolderWatcher()
 
     var defaultPreset: Preset {
         get { Preset(rawValue: defaultPresetRaw) ?? .balanced }
@@ -75,6 +78,51 @@ final class AppEnvironment: ObservableObject {
         set { pdfQualityRaw = newValue.rawValue }
     }
 
+    /// Same `@AppStorage`-doesn't-publish-on-its-own caveat as
+    /// `customOutputPath` above: writes route through here so
+    /// `objectWillChange` fires before the underlying JSON string changes,
+    /// and so every mutation point also restarts the watcher with the new
+    /// config (add/remove/toggle/preset-change all funnel through this
+    /// setter).
+    var watchedFolders: [WatchedFolder] {
+        get { WatchedFolderStore.decode(watchedFoldersJSON) }
+        set {
+            objectWillChange.send()
+            watchedFoldersJSON = WatchedFolderStore.encode(newValue)
+            reconfigureFolderWatcher()
+        }
+    }
+
+    func addWatchedFolder(path: String) {
+        var folders = watchedFolders
+        folders.append(WatchedFolder(path: path, presetRaw: defaultPresetRaw, enabled: true))
+        watchedFolders = folders
+    }
+
+    func removeWatchedFolder(id: UUID) {
+        watchedFolders.removeAll { $0.id == id }
+    }
+
+    func setWatchedFolderEnabled(id: UUID, enabled: Bool) {
+        updateWatchedFolder(id: id) { $0.enabled = enabled }
+    }
+
+    func setWatchedFolderPreset(id: UUID, presetRaw: String) {
+        updateWatchedFolder(id: id) { $0.presetRaw = presetRaw }
+    }
+
+    private func updateWatchedFolder(id: UUID, _ mutate: (inout WatchedFolder) -> Void) {
+        var folders = watchedFolders
+        guard let idx = folders.firstIndex(where: { $0.id == id }) else { return }
+        mutate(&folders[idx])
+        watchedFolders = folders
+    }
+
+    private func reconfigureFolderWatcher() {
+        folderWatcher.outputSuffix = outputSuffix
+        folderWatcher.reconfigure(folders: watchedFolders)
+    }
+
     /// @AppStorage on a plain ObservableObject doesn't publish changes, so
     /// views reading `customOutputPath` wouldn't refresh after the folder
     /// picker writes it. Route writes through here so the state owner emits
@@ -104,6 +152,17 @@ final class AppEnvironment: ObservableObject {
             didMigrateHEVCToContainer = true
         }
         Task { await revalidateLicense() }
+        // Wire the watcher's output straight into the normal drop path so
+        // watched-folder arrivals get identical routing/options handling as
+        // a manual drag-and-drop, just with that folder's own preset.
+        folderWatcher.onNewFiles = { [weak self] urls, preset in
+            _ = self?.handleDrop(urls: urls, preset: preset, updateDefaultPreset: false)
+        }
+        // `watchedFoldersJSON` is already loaded from disk at this point (it's
+        // an @AppStorage default), but reading it never went through the
+        // `watchedFolders` setter, so the watcher hasn't started yet — kick
+        // it off once here for whatever folders were enabled on last launch.
+        reconfigureFolderWatcher()
     }
 
     func refreshLicenseStatus() { licenseStatus = licenseState.status() }
@@ -116,7 +175,14 @@ final class AppEnvironment: ObservableObject {
         refreshLicenseStatus()
     }
 
-    func handleDrop(urls: [URL], preset: Preset?) -> Int {
+    /// - Parameter updateDefaultPreset: when `true` (the default, matching
+    ///   all pre-existing call sites), passing an explicit `preset` also
+    ///   becomes the new global default — that's correct for a manual drop
+    ///   onto a destination-dock preset, which is an explicit user choice.
+    ///   The folder watcher passes `false`: a background auto-compress
+    ///   firing for one watched folder's configured preset must not silently
+    ///   change what preset the user's *next manual drop* uses.
+    func handleDrop(urls: [URL], preset: Preset?, updateDefaultPreset: Bool = true) -> Int {
         // Expand folders one level, route each file by FileKind. Video goes
         // through the existing compress/GIF path; images get their own job
         // kind; dropped .gif files are optimized in place (the gifMode
@@ -147,7 +213,10 @@ final class AppEnvironment: ObservableObject {
             }
         }
         var effective = options
-        if let preset { effective.preset = preset; defaultPreset = preset }
+        if let preset {
+            effective.preset = preset
+            if updateDefaultPreset { defaultPreset = preset }
+        }
         if !videos.isEmpty {
             queue.add(urls: videos, kind: gifMode ? .gif : .compress, options: effective,
                       outputDir: outputDir, gifOptions: gifOptions, trashOriginalOnSuccess: trashOriginals)
