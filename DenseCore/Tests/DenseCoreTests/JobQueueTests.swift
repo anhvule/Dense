@@ -8,7 +8,8 @@ final class JobQueueTests: XCTestCase {
         let ffprobe = try XCTUnwrap(FFmpegRunner.locateTool(named: "ffprobe"))
         return JobQueue(compressor: VideoCompressor(ffmpegURL: ffmpeg, ffprobeURL: ffprobe),
                         gifConverter: GIFConverter(ffmpegURL: ffmpeg, ffprobeURL: ffprobe),
-                        imageCompressor: ImageCompressor(ffmpegURL: ffmpeg))
+                        imageCompressor: ImageCompressor(ffmpegURL: ffmpeg),
+                        audioExtractor: AudioExtractor(ffmpegURL: ffmpeg, ffprobeURL: ffprobe))
     }
     func fixtureURL(_ name: String) -> URL {
         var dir = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
@@ -143,6 +144,35 @@ final class JobQueueTests: XCTestCase {
         }
         XCTAssertEqual(result.outputURL.pathExtension, "gif")
         XCTAssertLessThan(result.outputBytes, result.inputBytes)
+    }
+
+    func testExtractAudioJobRunsThroughQueue() async throws {
+        let queue = try makeQueue()
+        queue.add(urls: [fixtureURL("clip-2s.mp4")], kind: .extractAudio, options: .init(preset: .balanced),
+                  outputDir: FileManager.default.temporaryDirectory)
+        await waitUntilIdle(queue)
+        guard case .done(let result) = queue.jobs[0].status else {
+            XCTFail("expected done, got \(queue.jobs[0].status)"); return
+        }
+        XCTAssertTrue(["mp3", "m4a"].contains(result.outputURL.pathExtension))
+    }
+
+    /// Extracted audio is a derivative of a kept source (like a video→GIF
+    /// conversion), not a replacement output, so trash-on-success must NOT
+    /// apply to it.
+    @MainActor
+    func testTrashOriginalOnSuccessDoesNotApplyToExtractAudioJob() async throws {
+        let queue = try makeQueue()
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("trash-me-\(UUID().uuidString).mp4")
+        try FileManager.default.copyItem(at: fixtureURL("clip-2s.mp4"), to: tmp)
+        queue.add(urls: [tmp], kind: .extractAudio, options: .init(preset: .balanced),
+                  outputDir: FileManager.default.temporaryDirectory, trashOriginalOnSuccess: true)
+        await waitUntilIdle(queue)
+        if case .done = queue.jobs[0].status {} else {
+            XCTFail("expected done, got \(queue.jobs[0].status)")
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: tmp.path), "original must be kept, not trashed")
     }
 
     /// Optimized gifs are a replacement-type output (the optimized gif

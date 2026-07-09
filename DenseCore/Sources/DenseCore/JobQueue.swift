@@ -1,6 +1,6 @@
 import Foundation
 
-public enum JobKind: Equatable { case compress, gif, image, optimizeGif }
+public enum JobKind: Equatable { case compress, gif, image, optimizeGif, extractAudio }
 
 public enum JobStatus: Equatable {
     case queued
@@ -30,14 +30,17 @@ public final class JobQueue: ObservableObject {
     private let compressor: VideoCompressor
     private let gifConverter: GIFConverter
     private let imageCompressor: ImageCompressor
+    private let audioExtractor: AudioExtractor
     private var running = 0
     private var pending: [(Job, CompressionOptions, URL?, GIFOptions, ImageOptions, Bool)] = []
     private var tasks: [UUID: Task<Void, Never>] = [:]
 
-    public init(compressor: VideoCompressor, gifConverter: GIFConverter, imageCompressor: ImageCompressor) {
+    public init(compressor: VideoCompressor, gifConverter: GIFConverter, imageCompressor: ImageCompressor,
+               audioExtractor: AudioExtractor) {
         self.compressor = compressor
         self.gifConverter = gifConverter
         self.imageCompressor = imageCompressor
+        self.audioExtractor = audioExtractor
     }
 
     public func add(urls: [URL], kind: JobKind, options: CompressionOptions, outputDir: URL?,
@@ -68,7 +71,8 @@ public final class JobQueue: ObservableObject {
         case CompressError.outputNotSmaller: return "Already optimized"
         case CompressError.unreachableTarget(let closest):
             return String(format: "Target too small — closest achievable is %.0f MB", closest)
-        case CompressError.probeFailed: return "Not a readable video file"
+        case CompressError.probeFailed(let reason):
+            return reason.contains("no audio stream") ? "No audio track in this file" : "Not a readable video file"
         case CompressError.ffmpegFailed(_, let last): return "Compression failed: \(last.prefix(120))"
         default: return error.localizedDescription
         }
@@ -114,12 +118,15 @@ public final class JobQueue: ObservableObject {
                 result = try await gifConverter.optimize(input: job.input, options: gifOptions,
                                                          outputDir: outputDir, suffix: options.outputSuffix,
                                                          progress: onProgress)
+            case .extractAudio:
+                result = try await audioExtractor.extract(input: job.input, outputDir: outputDir,
+                                                          suffix: options.outputSuffix, progress: onProgress)
             }
             job.status = .done(result)
             // Trash applies to replacement-type outputs (a compressed video,
             // a compressed image, or an optimized gif all stand in for the
-            // original); video→GIF conversions are derivatives of a kept
-            // source, so they're excluded here.
+            // original); video→GIF conversions and extracted audio tracks are
+            // derivatives of a kept source, so they're excluded here.
             if trashOriginalOnSuccess, job.kind == .compress || job.kind == .image || job.kind == .optimizeGif {
                 try? FileManager.default.trashItem(at: job.input, resultingItemURL: nil)
             }

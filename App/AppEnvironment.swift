@@ -64,7 +64,8 @@ final class AppEnvironment: ObservableObject {
         }
         queue = JobQueue(compressor: VideoCompressor(ffmpegURL: ffmpeg, ffprobeURL: ffprobe),
                          gifConverter: GIFConverter(ffmpegURL: ffmpeg, ffprobeURL: ffprobe),
-                         imageCompressor: ImageCompressor(ffmpegURL: ffmpeg))
+                         imageCompressor: ImageCompressor(ffmpegURL: ffmpeg),
+                         audioExtractor: AudioExtractor(ffmpegURL: ffmpeg, ffprobeURL: ffprobe))
         licenseStatus = licenseState.status()
         // One-time migration: fold the legacy standalone HEVC toggle into the
         // new container picker so users who had it on don't silently lose it.
