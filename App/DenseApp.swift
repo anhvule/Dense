@@ -12,6 +12,7 @@ struct DenseApp: App {
         WindowGroup {
             if case .trialExpired = env.licenseStatus {
                 LicenseGateView().environmentObject(env)
+                    .background(GlassBackground().ignoresSafeArea())
             } else {
                 MainView(queue: env.queue).environmentObject(env)
                     .overlay(alignment: .bottom) {
@@ -27,6 +28,7 @@ struct DenseApp: App {
                 Button("Check for Updates…") { updaterController.checkForUpdates(nil) }
             }
         }
+        .windowStyle(.hiddenTitleBar)
         Settings { SettingsView().environmentObject(env) }
     }
 }

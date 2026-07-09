@@ -22,19 +22,36 @@ struct MainView: View {
             if showAdvanced { AdvancedPanelView().environmentObject(env) }
             if dropRejected {
                 Text("Images & PDFs coming soon — v1 is all about video.")
-                    .font(.caption).foregroundStyle(.orange)
+                    .font(.caption.weight(.medium))
+                    .padding(.vertical, 6).padding(.horizontal, 12)
+                    .background(Capsule().fill(.orange.opacity(0.15)))
+                    .foregroundStyle(.orange)
             }
             if queue.jobs.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "arrow.down.doc").font(.system(size: 40)).foregroundStyle(.secondary)
-                    Text("Drop videos anywhere — or onto a destination").font(.callout).foregroundStyle(.secondary)
+                VStack(spacing: 10) {
+                    Image(systemName: "arrow.down.doc").font(.system(size: 40, weight: .light))
+                        .symbolRenderingMode(.hierarchical).foregroundStyle(Theme.accent)
+                    Text("Drop videos anywhere — or onto a destination")
+                        .font(.callout).foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(RoundedRectangle(cornerRadius: Theme.cardRadius)
+                    .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 5]))
+                    .foregroundStyle(Color.primary.opacity(0.15)))
+                .padding(.horizontal, 14).padding(.bottom, 12)
             } else {
-                List(queue.jobs) { FileRowView(job: $0) }.listStyle(.inset)
+                ScrollView {
+                    LazyVStack(spacing: 8) {
+                        ForEach(queue.jobs) { FileRowView(job: $0) }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 12)
+                    .animation(.spring(response: 0.4, dampingFraction: 0.8), value: queue.jobs.count)
+                }
             }
         }
-        .padding(.top, 12)
+        .padding(.top, 6)
+        .background(GlassBackground().ignoresSafeArea())
         .frame(minWidth: 640, minHeight: 460)
         .onDrop(of: [UTType.fileURL], isTargeted: nil) { providers in
             Task {
@@ -49,19 +66,23 @@ struct MainView: View {
     private var header: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 1) {
-                Text("Dense").font(.headline)
-                if !queue.jobs.isEmpty { Text(batchSummary).font(.caption).foregroundStyle(.secondary) }
+                Text("Dense").font(.system(size: 13, weight: .semibold)).foregroundStyle(.secondary)
+                if !queue.jobs.isEmpty {
+                    Text(batchSummary).font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                }
             }
             Spacer()
             if !queue.jobs.isEmpty {
-                Button("Cancel all") { queue.cancelAll() }
-                Button("Clear") { queue.clearFinished() }
+                Button("Cancel all") { queue.cancelAll() }.buttonStyle(.borderless)
+                Button("Clear") { queue.clearFinished() }.buttonStyle(.borderless)
             }
             Button {
                 withAnimation(.easeInOut(duration: 0.2)) { showAdvanced.toggle() }
             } label: {
                 Image(systemName: showAdvanced ? "chevron.up" : "slider.horizontal.3")
             }
+            .buttonStyle(.borderless)
+            .tint(Theme.accent)
             .help("Advanced options")
         }
         .padding(.horizontal, 14)

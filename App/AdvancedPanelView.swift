@@ -10,39 +10,39 @@ struct AdvancedPanelView: View {
     var body: some View {
         Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 10) {
             GridRow {
-                label("Format")
+                label("Format", systemImage: "shippingbox")
                 Picker("", selection: $env.containerRaw) {
                     Text("MP4 · H.264").tag("mp4")
                     Text("MP4 · HEVC").tag("mp4-hevc")
                     Text("MOV").tag("mov")
                 }.labelsHidden().frame(width: 150)
-                label("Resolution")
+                label("Resolution", systemImage: "aspectratio")
                 Picker("", selection: $env.resolutionCapRaw) {
                     Text("Preset default").tag("")
                     ForEach(ResolutionCap.allCases) { Text($0.displayName).tag($0.rawValue) }
                 }.labelsHidden().frame(width: 150)
             }
             GridRow {
-                label("Target size")
+                label("Target size", systemImage: "scalemass")
                 HStack(spacing: 4) {
                     TextField("auto", text: $env.customTargetMBText).frame(width: 64)
                     Text("MB").font(.caption).foregroundStyle(.secondary)
                 }
-                label("Audio")
+                label("Audio", systemImage: "speaker.wave.2")
                 Toggle("Remove audio", isOn: $env.removeAudio).toggleStyle(.checkbox)
             }
             GridRow {
-                label("Output")
+                label("Output", systemImage: "folder")
                 Picker("", selection: $env.outputToCustomFolder) {
                     Text("Next to original").tag(false)
                     Text("Custom folder").tag(true)
                 }.labelsHidden().frame(width: 150)
-                label("Suffix")
+                label("Suffix", systemImage: "textformat")
                 TextField("-compressed", text: $env.outputSuffix).frame(width: 150)
             }
             if env.outputToCustomFolder {
                 GridRow {
-                    label("Folder")
+                    label("Folder", systemImage: "folder.badge.gearshape")
                     HStack {
                         Text(env.customOutputPath.isEmpty ? "None chosen" : env.customOutputPath)
                             .font(.caption).lineLimit(1).truncationMode(.middle)
@@ -51,22 +51,24 @@ struct AdvancedPanelView: View {
                 }
             }
             GridRow {
-                label("Originals")
+                label("Originals", systemImage: "trash")
                 Toggle("Move to Trash after success", isOn: Binding(
                     get: { env.trashOriginals },
                     set: { on in if on { confirmTrash = true } else { env.trashOriginals = false } }))
                     .toggleStyle(.checkbox).gridCellColumns(3)
             }
             GridRow {
-                label("GIF mode")
+                label("GIF mode", systemImage: "photo.stack")
                 Toggle("Convert to GIF", isOn: $env.gifMode).toggleStyle(.checkbox)
                 Stepper("fps \(env.gifFps)", value: $env.gifFps, in: 5...30)
                 Stepper("width \(env.gifWidth)", value: $env.gifWidth, in: 240...960, step: 80)
             }
         }
         .padding(14)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor)))
+        .glassCard()
+        .tint(Theme.accent)
         .padding(.horizontal, 14)
+        .transition(.move(edge: .top).combined(with: .opacity))
         .alert("Move originals to Trash?", isPresented: $confirmTrash) {
             Button("Move to Trash") { env.trashOriginals = true }
             Button("Cancel", role: .cancel) {}
@@ -75,8 +77,16 @@ struct AdvancedPanelView: View {
         }
     }
 
-    private func label(_ s: String) -> some View {
-        Text(s).font(.caption).foregroundStyle(.secondary).frame(width: 70, alignment: .leading)
+    private func label(_ s: String, systemImage: String) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: systemImage)
+                .font(.system(size: 14))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(.secondary)
+                .frame(width: 14)
+            Text(s).font(.caption).foregroundStyle(.secondary)
+        }
+        .frame(width: 84, alignment: .leading)
     }
 
     private func pickFolder() {
