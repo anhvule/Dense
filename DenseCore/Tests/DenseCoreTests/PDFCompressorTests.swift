@@ -65,6 +65,40 @@ final class PDFCompressorTests: XCTestCase {
         return url
     }
 
+    /// 4 pages alternating heavy/light: pages 1 and 3 embed the 1600x1200
+    /// photo.jpg full-page (image-heavy, above the 1MP threshold); pages 2
+    /// and 4 are drawn attributed-string paragraphs, with `knownSentence`
+    /// on page 2. Exercises BOTH per-page paths in one document: rasterize
+    /// for the heavy pages, vector-preserving drawPDFPage for the light
+    /// ones.
+    private func makeMixedPDF() throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("t-mixed-\(UUID().uuidString).pdf")
+        let source = try XCTUnwrap(CGImageSourceCreateWithURL(fixtureURL("photo.jpg") as CFURL, nil))
+        let image = try XCTUnwrap(CGImageSourceCreateImageAtIndex(source, 0, nil))
+        var mediaBox = CGRect(x: 0, y: 0, width: 612, height: 792)
+        let ctx = try XCTUnwrap(CGContext(url as CFURL, mediaBox: &mediaBox, nil))
+        let font = CTFontCreateWithName("Helvetica" as CFString, 12, nil)
+        let attrs: [NSAttributedString.Key: Any] = [.font: font]
+        let filler = String(repeating: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. ", count: 60)
+        for p in 0..<4 {
+            ctx.beginPDFPage(nil)
+            if p % 2 == 0 {
+                ctx.draw(image, in: mediaBox)
+            } else {
+                let body = p == 1 ? "\(knownSentence) \(filler)" : filler
+                let text = NSAttributedString(string: "Page \(p + 1). \(body)", attributes: attrs)
+                let framesetter = CTFramesetterCreateWithAttributedString(text)
+                let path = CGPath(rect: mediaBox.insetBy(dx: 48, dy: 48), transform: nil)
+                let frame = CTFramesetterCreateFrame(framesetter, CFRange(location: 0, length: 0), path, nil)
+                CTFrameDraw(frame, ctx)
+            }
+            ctx.endPDFPage()
+        }
+        ctx.closePDF()
+        return url
+    }
+
     /// Re-saves an existing PDF with a user password via PDFKit.
     private func makeEncryptedPDF(from plainURL: URL, password: String = "s3cret") throws -> URL {
         let url = FileManager.default.temporaryDirectory
@@ -117,38 +151,61 @@ final class PDFCompressorTests: XCTestCase {
         XCTAssertLessThanOrEqual(small.outputBytes, good.outputBytes)
     }
 
-    /// The binding empirical check: an all-text document must not be
-    /// rewritten at a real size cost. PDFCompressor's chosen behavior is to
-    /// skip the rewrite entirely (outputNotSmaller) since there are no
-    /// image-heavy pages — see PDFCompressor's doc comment and
-    /// task-F4-report.md for what drawPDFPage's font re-embedding actually
-    /// measured on this fixture before that guard was added.
-    func testTextOnlyPDFPassesThroughOrStaysNearOriginalWithTextIntact() async throws {
+    /// A document with zero image-heavy pages is never rewritten — the
+    /// designed behavior is an explicit `.outputNotSmaller` short-circuit
+    /// (a vector redraw has no size upside for an all-text doc, only the
+    /// font re-embedding downside), and the original must be untouched.
+    /// Text-survival through the drawPDFPage vector-preserving path is
+    /// covered by `testMixedPDFShrinksAndLightPagesKeepSelectableText`,
+    /// where that path actually runs.
+    func testTextOnlyPDFSkipsRewriteWithOutputNotSmaller() async throws {
         let input = try makeTextOnlyPDF()
         defer { try? FileManager.default.removeItem(at: input) }
-        let inputBytes = fileSize(input)
+        let before = try Data(contentsOf: input)
         let compressor = PDFCompressor()
         do {
-            let result = try await compressor.compress(input: input, quality: .balanced,
-                                                        outputDir: FileManager.default.temporaryDirectory,
-                                                        suffix: "-t-text") { _ in }
-            defer { try? FileManager.default.removeItem(at: result.outputURL) }
-            XCTAssertLessThanOrEqual(Double(result.outputBytes), Double(inputBytes) * 1.1,
-                "if a text-only doc is rewritten at all, it must stay within 1.1x original")
-            let outDoc = try XCTUnwrap(PDFDocument(url: result.outputURL))
-            let allText = (0..<outDoc.pageCount).compactMap { outDoc.page(at: $0)?.string }.joined()
-            XCTAssertTrue(allText.contains(knownSentence), "known sentence must survive as selectable/extractable text")
+            _ = try await compressor.compress(input: input, quality: .balanced,
+                                               outputDir: FileManager.default.temporaryDirectory,
+                                               suffix: "-t-text") { _ in }
+            XCTFail("expected outputNotSmaller for a document with no image-heavy pages")
         } catch CompressError.outputNotSmaller {
-            // Acceptable and expected: no image-heavy pages means PDFCompressor
-            // skips the rewrite rather than pay the font re-embedding tax.
+            // Designed behavior: skip the rewrite entirely.
         }
+        XCTAssertEqual(try Data(contentsOf: input), before, "original must be untouched")
+    }
+
+    /// The real coverage for the vector-preserving light-page path: a
+    /// 4-page mixed document (2 heavy image pages, 2 text pages) goes
+    /// through the full rewrite. Heavy pages are rasterized+JPEG'd; light
+    /// pages are redrawn via drawPDFPage — and the known sentence must
+    /// still be extractable from the OUTPUT, proving text stayed text
+    /// rather than becoming pixels.
+    func testMixedPDFShrinksAndLightPagesKeepSelectableText() async throws {
+        let input = try makeMixedPDF()
+        defer { try? FileManager.default.removeItem(at: input) }
+        let inputBytes = fileSize(input)
+
+        let compressor = PDFCompressor()
+        let result = try await compressor.compress(input: input, quality: .balanced,
+                                                    outputDir: FileManager.default.temporaryDirectory,
+                                                    suffix: "-t-mixed") { _ in }
+        defer { try? FileManager.default.removeItem(at: result.outputURL) }
+
+        XCTAssertLessThan(result.outputBytes, inputBytes)
+        let cgDoc = try XCTUnwrap(CGPDFDocument(result.outputURL as CFURL), "output must open via CGPDFDocument")
+        XCTAssertEqual(cgDoc.numberOfPages, 4, "page count must be preserved")
+
+        let outDoc = try XCTUnwrap(PDFDocument(url: result.outputURL))
+        let allText = (0..<outDoc.pageCount).compactMap { outDoc.page(at: $0)?.string }.joined()
+        XCTAssertTrue(allText.contains(knownSentence),
+                      "known sentence must survive as selectable/extractable text on the redrawn light pages")
     }
 
     func testTextOnlyPDFPageCountAndOriginalTextSurviveWhenSourceCheckedDirectly() throws {
         // Sanity check on the fixture generator itself (independent of the
         // compressor): the known sentence is really extractable from the
-        // untouched input, so the compressed-output assertion above is
-        // actually testing something.
+        // untouched input, so the mixed test's compressed-output text
+        // assertion is actually testing something.
         let input = try makeTextOnlyPDF()
         defer { try? FileManager.default.removeItem(at: input) }
         let doc = try XCTUnwrap(PDFDocument(url: input))

@@ -87,6 +87,12 @@ final class JobQueueTests: XCTestCase {
         XCTAssertEqual(JobQueue.message(for: CompressError.outputNotSmaller), "Already optimized")
         XCTAssertTrue(JobQueue.message(for: CompressError.unreachableTarget(closestMB: 125.1))
             .contains("125"))
+        XCTAssertEqual(JobQueue.message(for: CompressError.probeFailed("Password-protected PDF")),
+                       "Password-protected PDF — remove the password first")
+        XCTAssertEqual(JobQueue.message(for: CompressError.probeFailed("no audio stream")),
+                       "No audio track in this file")
+        XCTAssertEqual(JobQueue.message(for: CompressError.probeFailed("ffprobe exit 1")),
+                       "Not a readable video file")
     }
 
     func testCancelAllNeverShowsRawFfmpegFailureMessage() async throws {

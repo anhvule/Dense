@@ -74,7 +74,9 @@ public final class JobQueue: ObservableObject {
         case CompressError.unreachableTarget(let closest):
             return String(format: "Target too small — closest achievable is %.0f MB", closest)
         case CompressError.probeFailed(let reason):
-            return reason.contains("no audio stream") ? "No audio track in this file" : "Not a readable video file"
+            if reason.contains("no audio stream") { return "No audio track in this file" }
+            if reason.contains("Password-protected") { return "Password-protected PDF — remove the password first" }
+            return "Not a readable video file"
         case CompressError.ffmpegFailed(_, let last): return "Compression failed: \(last.prefix(120))"
         default: return error.localizedDescription
         }
