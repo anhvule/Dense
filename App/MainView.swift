@@ -8,44 +8,35 @@ struct MainView: View {
     @State private var dropRejected = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Picker("Preset", selection: Binding(
-                    get: { env.defaultPreset },
-                    set: { env.defaultPreset = $0 })) {
-                    ForEach(Preset.allCases) { Text($0.displayName).tag($0) }
-                }
-                .frame(maxWidth: 260)
-                Toggle("GIF", isOn: $env.gifMode).toggleStyle(.button)
-                Spacer()
-                if !queue.jobs.isEmpty {
-                    Button("Clear") { queue.clearFinished() }
+        VStack(spacing: 12) {
+            header
+            DestinationDockView(selected: Binding(
+                get: { env.defaultPreset }, set: { env.defaultPreset = $0 })) { preset, providers in
+                Task {
+                    let urls = await loadURLs(from: providers)
+                    let accepted = env.handleDrop(urls: urls, preset: preset)
+                    dropRejected = accepted == 0 && !urls.isEmpty
                 }
             }
-            .padding(12)
-
-            if dropRejected && !queue.jobs.isEmpty {
+            if dropRejected {
                 Text("Images & PDFs coming soon — v1 is all about video.")
-                    .font(.caption).foregroundStyle(.orange).padding(.bottom, 4)
+                    .font(.caption).foregroundStyle(.orange)
             }
-
             if queue.jobs.isEmpty {
                 VStack(spacing: 8) {
-                    Image(systemName: "arrow.down.doc").font(.system(size: 44))
-                    Text("Drop videos here").font(.title3)
-                    Text(dropRejected ? "Images & PDFs coming soon — v1 is all about video." : "MP4, MOV & more")
-                        .foregroundStyle(dropRejected ? .orange : .secondary)
+                    Image(systemName: "arrow.down.doc").font(.system(size: 40)).foregroundStyle(.secondary)
+                    Text("Drop videos anywhere — or onto a destination").font(.callout).foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                List(queue.jobs) { QueueRowView(job: $0) }
-                    .listStyle(.inset)
+                List(queue.jobs) { FileRowView(job: $0) }.listStyle(.inset)
             }
         }
-        .frame(minWidth: 560, minHeight: 400)
+        .padding(.top, 12)
+        .frame(minWidth: 640, minHeight: 460)
         .onDrop(of: [UTType.fileURL], isTargeted: nil) { providers in
             Task {
-                let urls = await Self.loadURLs(from: providers)
+                let urls = await loadURLs(from: providers)
                 let accepted = env.handleDrop(urls: urls)
                 dropRejected = accepted == 0 && !urls.isEmpty
             }
@@ -53,13 +44,22 @@ struct MainView: View {
         }
     }
 
+    private var header: some View {
+        HStack {
+            Text("Compress").font(.headline)
+            Spacer()
+            if !queue.jobs.isEmpty { Button("Clear") { queue.clearFinished() } }
+        }
+        .padding(.horizontal, 14)
+    }
+
     /// Loads dropped file URLs from NSItemProviders. The async bridge for
     /// `NSItemProvider.loadItem` is fiddly to chain through `flatMap` (per the
     /// brief's note), so this uses the classic completion-handler form,
     /// wrapped per-provider in a checked continuation and joined with a
     /// TaskGroup. Runs off the MainActor (item loading is I/O); results are
-    /// awaited back on the MainActor in `body` before touching `env`/state.
-    private static func loadURLs(from providers: [NSItemProvider]) async -> [URL] {
+    /// awaited back on the MainActor before touching `env`/state.
+    private func loadURLs(from providers: [NSItemProvider]) async -> [URL] {
         let typeIdentifier = UTType.fileURL.identifier
         return await withTaskGroup(of: URL?.self) { group in
             for provider in providers {

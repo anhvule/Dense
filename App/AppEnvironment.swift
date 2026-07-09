@@ -36,7 +36,7 @@ final class AppEnvironment: ObservableObject {
         refreshLicenseStatus()
     }
 
-    func handleDrop(urls: [URL]) -> Int {
+    func handleDrop(urls: [URL], preset: Preset?) -> Int {
         // Expand folders one level, filter to video extensions
         var videos: [URL] = []
         for url in urls {
@@ -50,7 +50,11 @@ final class AppEnvironment: ObservableObject {
                 videos.append(url)
             }
         }
-        queue.add(urls: videos, kind: gifMode ? .gif : .compress, options: options, outputDir: nil)
+        var effective = options
+        if let preset { effective.preset = preset; defaultPreset = preset }
+        queue.add(urls: videos, kind: gifMode ? .gif : .compress, options: effective, outputDir: nil)
         return videos.count
     }
+
+    func handleDrop(urls: [URL]) -> Int { handleDrop(urls: urls, preset: nil) }
 }
