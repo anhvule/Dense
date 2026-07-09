@@ -9,7 +9,7 @@
       <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
       <enclosure url="https://REPLACE-AT-LAUNCH.example/downloads/Compress-1.0.0.dmg"
-                 sparkle:edSignature="REPLACE_WITH_sign_update_OUTPUT" length="0" type="application/octet-stream"/>
+                 sparkle:edSignature="REPLACE-AT-LAUNCH-EDSIGNATURE" length="0" type="application/octet-stream"/>
     </item>
   </channel>
 </rss>

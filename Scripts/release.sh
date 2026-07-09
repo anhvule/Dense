@@ -19,19 +19,43 @@ case "$ARCHS" in
   *) echo "ERROR: expected universal (x86_64 arm64) binary, got: $ARCHS" >&2; exit 1 ;;
 esac
 
-# Sign bundled ffmpeg/ffprobe first (nested code), then the app
+# Sign bundled ffmpeg/ffprobe first (nested code)
 for tool in ffmpeg ffprobe; do
   codesign --force --options runtime --timestamp --sign "$IDENTITY" "$APP/Contents/Resources/$tool"
 done
-codesign --force --deep --options runtime --timestamp \
+
+# Sign Sparkle's nested helpers inside-out, per Sparkle's official notarization
+# guidance (`--deep` mishandles Sparkle 2's embedded XPC services / Autoupdate /
+# Updater.app and is a known source of notarization rejections).
+SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"
+if [ -d "$SPARKLE" ]; then
+  SPARKLE_VERSION_DIR="$SPARKLE/Versions/B"
+  INSTALLER_XPC="$SPARKLE_VERSION_DIR/XPCServices/Installer.xpc"
+  DOWNLOADER_XPC="$SPARKLE_VERSION_DIR/XPCServices/Downloader.xpc"
+  AUTOUPDATE="$SPARKLE_VERSION_DIR/Autoupdate"
+  UPDATER_APP="$SPARKLE_VERSION_DIR/Updater.app"
+
+  [ -e "$INSTALLER_XPC" ] && codesign --force --options runtime --timestamp --sign "$IDENTITY" "$INSTALLER_XPC"
+  [ -e "$DOWNLOADER_XPC" ] && codesign --force --options runtime --timestamp --preserve-metadata=entitlements --sign "$IDENTITY" "$DOWNLOADER_XPC"
+  [ -e "$AUTOUPDATE" ] && codesign --force --options runtime --timestamp --sign "$IDENTITY" "$AUTOUPDATE"
+  [ -e "$UPDATER_APP" ] && codesign --force --options runtime --timestamp --sign "$IDENTITY" "$UPDATER_APP"
+  codesign --force --options runtime --timestamp --sign "$IDENTITY" "$SPARKLE"
+fi
+
+# Sign the app itself last, without --deep (per Apple guidance: sign nested
+# code first, then the outer bundle).
+codesign --force --options runtime --timestamp \
   --entitlements App/Compress.entitlements --sign "$IDENTITY" "$APP"
 
 hdiutil create -volname Compress -srcfolder "$APP" -ov -format UDZO "build/Compress-$VERSION.dmg"
 xcrun notarytool submit "build/Compress-$VERSION.dmg" --keychain-profile compress-notary --wait
 xcrun stapler staple "build/Compress-$VERSION.dmg"
 
-# Sparkle signature for appcast
-SIGNATURE=$(./build/dd/SourcePackages/artifacts/sparkle/Sparkle/bin/sign_update "build/Compress-$VERSION.dmg")
+# Sparkle signature for appcast — locate sign_update dynamically since its
+# path under SPM artifacts/checkouts can vary; don't assume a fixed layout.
+SIGN_UPDATE=$(find build/dd/SourcePackages -type f -name sign_update -perm +111 2>/dev/null | head -1)
+[ -n "$SIGN_UPDATE" ] || { echo "ERROR: sign_update not found under build/dd/SourcePackages — check Sparkle artifacts" >&2; exit 1; }
+SIGNATURE=$("$SIGN_UPDATE" "build/Compress-$VERSION.dmg")
 echo "appcast enclosure attrs: $SIGNATURE"
 echo "DONE: build/Compress-$VERSION.dmg"
 
@@ -65,9 +89,10 @@ echo "DONE: build/Compress-$VERSION.dmg"
 #    - Verify with: xcrun notarytool history --keychain-profile compress-notary
 #
 # 3. Generate the Sparkle EdDSA signing keys (one time):
-#    - After `xcodegen generate`, the Sparkle SPM package's tools are under
-#      build/dd/SourcePackages/artifacts/sparkle/Sparkle/bin/ once a build
-#      has run; alternatively download the Sparkle release archive from
+#    - After `xcodegen generate`, the Sparkle SPM package's tools land
+#      somewhere under build/dd/SourcePackages/ once a build has run (exact
+#      subpath varies — this script locates sign_update dynamically via
+#      `find`); alternatively download the Sparkle release archive from
 #      https://github.com/sparkle-project/Sparkle/releases and use the
 #      bin/generate_keys tool.
 #    - Run: ./generate_keys
@@ -75,7 +100,7 @@ echo "DONE: build/Compress-$VERSION.dmg"
 #      bin/sign_update, invoked above) and prints a public key string.
 #    - Paste the printed public key into project.yml's
 #      targets.Compress.info.properties.SUPublicEDKey (replacing
-#      REPLACE_WITH_generate_keys_OUTPUT), then re-run `xcodegen generate`.
+#      REPLACE-AT-LAUNCH-EDKEY), then re-run `xcodegen generate`.
 #    - Re-run generate_keys -p at any time to reprint the existing public key
 #      without creating a new keypair.
 #

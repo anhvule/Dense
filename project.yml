@@ -37,5 +37,5 @@ targets:
         LSMinimumSystemVersion: "13.0"
         NSHumanReadableCopyright: Uses FFmpeg (ffmpeg.org) under the (L)GPL, run as a separate process.
         SUFeedURL: https://REPLACE-AT-LAUNCH.example/appcast.xml
-        SUPublicEDKey: REPLACE_WITH_generate_keys_OUTPUT
+        SUPublicEDKey: REPLACE-AT-LAUNCH-EDKEY
         SUEnableAutomaticChecks: true
