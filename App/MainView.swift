@@ -49,7 +49,7 @@ struct MainView: View {
     private var header: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 1) {
-                Text("Compress").font(.headline)
+                Text("Dense").font(.headline)
                 if !queue.jobs.isEmpty { Text(batchSummary).font(.caption).foregroundStyle(.secondary) }
             }
             Spacer()

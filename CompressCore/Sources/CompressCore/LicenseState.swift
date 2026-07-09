@@ -7,7 +7,7 @@ public protocol KeyValueStore {
 }
 
 public final class KeychainStore: KeyValueStore {
-    private let service = "app.compress.mac"
+    private let service = "app.dense.mac"
 
     public init() {}
 

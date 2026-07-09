@@ -7,14 +7,14 @@ IDENTITY="Developer ID Application"   # picks up the cert by prefix
 cd "$(dirname "$0")/.."
 
 xcodegen generate
-xcodebuild -project Compress.xcodeproj -scheme Compress -configuration Release \
+xcodebuild -project Dense.xcodeproj -scheme Dense -configuration Release \
   MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD" -derivedDataPath build/dd \
   -destination "generic/platform=macOS" \
-  archive -archivePath build/Compress.xcarchive
-APP="build/Compress.xcarchive/Products/Applications/Compress.app"
+  archive -archivePath build/Dense.xcarchive
+APP="build/Dense.xcarchive/Products/Applications/Dense.app"
 
 # Verify the archived binary is truly universal before signing/shipping it.
-ARCHS="$(lipo -archs "$APP/Contents/MacOS/Compress")"
+ARCHS="$(lipo -archs "$APP/Contents/MacOS/Dense")"
 echo "Archive architectures: $ARCHS"
 case "$ARCHS" in
   *x86_64*arm64*|*arm64*x86_64*) ;;
@@ -49,17 +49,17 @@ fi
 codesign --force --options runtime --timestamp \
   --entitlements App/Compress.entitlements --sign "$IDENTITY" "$APP"
 
-hdiutil create -volname Compress -srcfolder "$APP" -ov -format UDZO "build/Compress-$VERSION.dmg"
-xcrun notarytool submit "build/Compress-$VERSION.dmg" --keychain-profile compress-notary --wait
-xcrun stapler staple "build/Compress-$VERSION.dmg"
+hdiutil create -volname Dense -srcfolder "$APP" -ov -format UDZO "build/Dense-$VERSION.dmg"
+xcrun notarytool submit "build/Dense-$VERSION.dmg" --keychain-profile compress-notary --wait
+xcrun stapler staple "build/Dense-$VERSION.dmg"
 
 # Sparkle signature for appcast — locate sign_update dynamically since its
 # path under SPM artifacts/checkouts can vary; don't assume a fixed layout.
 SIGN_UPDATE=$(find build/dd/SourcePackages -type f -name sign_update -perm +111 2>/dev/null | head -1)
 [ -n "$SIGN_UPDATE" ] || { echo "ERROR: sign_update not found under build/dd/SourcePackages — check Sparkle artifacts" >&2; exit 1; }
-SIGNATURE=$("$SIGN_UPDATE" "build/Compress-$VERSION.dmg")
+SIGNATURE=$("$SIGN_UPDATE" "build/Dense-$VERSION.dmg")
 echo "appcast enclosure attrs: $SIGNATURE"
-echo "DONE: build/Compress-$VERSION.dmg (version $VERSION, build $BUILD)"
+echo "DONE: build/Dense-$VERSION.dmg (version $VERSION, build $BUILD)"
 
 # -----------------------------------------------------------------------------
 # Docs: one-time setup required before this script can run end-to-end.
@@ -101,7 +101,7 @@ echo "DONE: build/Compress-$VERSION.dmg (version $VERSION, build $BUILD)"
 #      This creates a private key in the login Keychain (used later by
 #      bin/sign_update, invoked above) and prints a public key string.
 #    - Paste the printed public key into project.yml's
-#      targets.Compress.info.properties.SUPublicEDKey (replacing
+#      targets.Dense.info.properties.SUPublicEDKey (replacing
 #      REPLACE-AT-LAUNCH-EDKEY), then re-run `xcodegen generate`.
 #    - Re-run generate_keys -p at any time to reprint the existing public key
 #      without creating a new keypair.

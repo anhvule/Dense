@@ -2,14 +2,14 @@
 <!-- Site/appcast.xml — update per release with sign_update output -->
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
-    <title>Compress Updates</title>
+    <title>Dense Updates</title>
     <item>
       <title>1.0.0</title>
       <!-- sparkle:version must equal the app's CURRENT_PROJECT_VERSION build number -->
       <sparkle:version>1</sparkle:version>
       <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://REPLACE-AT-LAUNCH.example/downloads/Compress-1.0.0.dmg"
+      <enclosure url="https://REPLACE-AT-LAUNCH.example/downloads/Dense-1.0.0.dmg"
                  sparkle:edSignature="REPLACE-AT-LAUNCH-EDSIGNATURE" length="0" type="application/octet-stream"/>
     </item>
   </channel>

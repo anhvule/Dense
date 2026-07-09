@@ -1,4 +1,4 @@
-# Manual QA Checklist — Compress (destination-dock redesign)
+# Manual QA Checklist — Dense (destination-dock redesign)
 
 Run this pass by hand on a real Mac before every tagged release. It exists because
 the automated suite (`swift test`, currently 45/45) covers the compression engine,
@@ -87,7 +87,7 @@ Check off each box and write the actual result next to any failure.
 
 ## 4. Batch header
 
-- [ ] With an empty queue, header shows just "Compress" (no summary line, no
+- [ ] With an empty queue, header shows just "Dense" (no summary line, no
       Cancel/Clear buttons).
 - [ ] **Batch summary with a real multi-file batch** — queue 4–5 real files of
       varying sizes and let them all finish. Expected: the header line reads

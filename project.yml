@@ -1,7 +1,7 @@
 # project.yml
-name: Compress
+name: Dense
 options:
-  bundleIdPrefix: app.compress
+  bundleIdPrefix: app.dense
 packages:
   CompressCore:
     path: CompressCore
@@ -9,7 +9,7 @@ packages:
     url: https://github.com/sparkle-project/Sparkle
     majorVersion: 2.0.0
 targets:
-  Compress:
+  Dense:
     type: application
     platform: macOS
     deploymentTarget: "13.0"
@@ -22,7 +22,7 @@ targets:
       - package: Sparkle
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.compress.mac
+        PRODUCT_BUNDLE_IDENTIFIER: app.dense.mac
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
         ARCHS: "arm64 x86_64"
@@ -33,7 +33,8 @@ targets:
     info:
       path: App/Info.plist
       properties:
-        CFBundleDisplayName: Compress
+        CFBundleName: Dense
+        CFBundleDisplayName: Dense
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSMinimumSystemVersion: "13.0"
