@@ -43,6 +43,44 @@ private final class LineBuffer: @unchecked Sendable {
     }
 }
 
+/// Tracks whether a `Process` has actually been launched yet, guarded by a lock so
+/// the task-cancellation handler (which can fire on any thread, even before
+/// `process.run()` executes) and the launch site never race on the same flags.
+/// Marked `@unchecked Sendable` because all access is guarded by `lock`.
+private final class LaunchState: @unchecked Sendable {
+    private let lock = NSLock()
+    private var launched = false
+    private var cancelledBeforeLaunch = false
+
+    /// Runs `launch` (expected to call `process.run()`) while holding the lock,
+    /// unless cancellation already arrived first — in which case `launch` is
+    /// skipped and this returns `false` so the caller can throw
+    /// `CancellationError` instead of starting a process nobody wants. Holding
+    /// the lock for the duration of `launch` closes the race where the
+    /// cancellation handler could otherwise run between "decided to launch" and
+    /// "process actually started".
+    func launchIfNotCancelled(_ launch: () throws -> Void) rethrows -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        if cancelledBeforeLaunch { return false }
+        try launch()
+        launched = true
+        return true
+    }
+
+    /// Call from the cancellation handler. Returns `true` if the process was
+    /// already launched (so `terminate()` is safe to call), `false` if launch
+    /// hasn't happened yet — in which case the launch site will see
+    /// `cancelledBeforeLaunch` and bail out before calling `process.run()`.
+    func markCancelled() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        if launched { return true }
+        cancelledBeforeLaunch = true
+        return false
+    }
+}
+
 public struct FFmpegRunner {
     public let binaryURL: URL
 
@@ -57,34 +95,52 @@ public struct FFmpegRunner {
         process.standardError = stderrPipe
         process.standardOutput = FileHandle.nullDevice
 
-        return try await withCheckedThrowingContinuation { continuation in
-            let buffer = LineBuffer()
+        let launchState = LaunchState()
 
-            stderrPipe.fileHandleForReading.readabilityHandler = { handle in
-                let chunk = handle.availableData
-                guard !chunk.isEmpty else { return }
-                for line in buffer.appendAndDrainLines(chunk) {
-                    onStderrLine(line)
-                }
-            }
-            process.terminationHandler = { proc in
-                // Unhook the handler first, then explicitly drain any bytes that were
-                // written after the last `availableData` read (or while a handler
-                // invocation was still in flight) so nothing is lost or raced on.
-                stderrPipe.fileHandleForReading.readabilityHandler = nil
-                let remaining = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-                if !remaining.isEmpty {
-                    for line in buffer.appendAndDrainLines(remaining) {
+        return try await withTaskCancellationHandler(operation: {
+            try await withCheckedThrowingContinuation { continuation in
+                let buffer = LineBuffer()
+
+                stderrPipe.fileHandleForReading.readabilityHandler = { handle in
+                    let chunk = handle.availableData
+                    guard !chunk.isEmpty else { return }
+                    for line in buffer.appendAndDrainLines(chunk) {
                         onStderrLine(line)
                     }
                 }
-                if let rest = buffer.drainRemainder() {
-                    onStderrLine(rest)
+                process.terminationHandler = { proc in
+                    // Unhook the handler first, then explicitly drain any bytes that were
+                    // written after the last `availableData` read (or while a handler
+                    // invocation was still in flight) so nothing is lost or raced on.
+                    stderrPipe.fileHandleForReading.readabilityHandler = nil
+                    let remaining = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+                    if !remaining.isEmpty {
+                        for line in buffer.appendAndDrainLines(remaining) {
+                            onStderrLine(line)
+                        }
+                    }
+                    if let rest = buffer.drainRemainder() {
+                        onStderrLine(rest)
+                    }
+                    continuation.resume(returning: proc.terminationStatus)
                 }
-                continuation.resume(returning: proc.terminationStatus)
+
+                do {
+                    let didLaunch = try launchState.launchIfNotCancelled { try process.run() }
+                    if !didLaunch {
+                        process.terminationHandler = nil
+                        stderrPipe.fileHandleForReading.readabilityHandler = nil
+                        continuation.resume(throwing: CancellationError())
+                    }
+                } catch {
+                    continuation.resume(throwing: error)
+                }
             }
-            do { try process.run() } catch { continuation.resume(throwing: error) }
-        }
+        }, onCancel: {
+            if launchState.markCancelled(), process.isRunning {
+                process.terminate()
+            }
+        })
     }
 
     public func runCapturingStdout(arguments: [String]) async throws -> (exitCode: Int32, stdout: Data) {
