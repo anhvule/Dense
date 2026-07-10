@@ -98,6 +98,48 @@ struct AdvancedPanelView: View {
                     ForEach(PDFQuality.allCases) { Text($0.displayName).tag($0.rawValue) }
                 }.labelsHidden().frame(width: 150)
             }
+            GridRow {
+                label("Local API", systemImage: "network")
+                Toggle("Enable", isOn: Binding(
+                    get: { env.apiEnabled },
+                    set: { env.setAPIEnabled($0) })).toggleStyle(.checkbox)
+                if env.apiEnabled {
+                    HStack(spacing: 4) {
+                        Text("Port").font(.caption).foregroundStyle(.secondary)
+                        TextField("4499", value: Binding(
+                            get: { env.apiPort },
+                            set: { env.setAPIPort($0) }), format: .number)
+                            .frame(width: 60)
+                    }
+                }
+            }
+            if env.apiEnabled {
+                GridRow {
+                    Color.clear.frame(width: 84, height: 1)
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) {
+                            Text(env.localAPIServer.token)
+                                .font(.system(.caption, design: .monospaced))
+                                .textSelection(.enabled)
+                            Button("Copy") {
+                                NSPasteboard.general.clearContents()
+                                NSPasteboard.general.setString(env.localAPIServer.token, forType: .string)
+                            }
+                        }
+                        Text("curl -s http://127.0.0.1:\(env.apiPort)/v1/jobs "
+                             + "-H \"Authorization: Bearer \(env.localAPIServer.token)\"")
+                            .font(.caption2).foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                        Text("Bound to 127.0.0.1 only, off unless enabled here. Loopback only — "
+                             + "not reachable from other machines. The token also rotates every "
+                             + "launch/restart and is written to ~/Library/Application Support/Dense/"
+                             + "api-token (readable only by you) while the server is on, so scripts "
+                             + "can read it without the UI.")
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
+                    .gridCellColumns(3)
+                }
+            }
         }
         .padding(14)
         .glassCard()

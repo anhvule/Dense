@@ -44,8 +44,12 @@ final class AppEnvironment: ObservableObject {
     @AppStorage("threadLimitRaw") var threadLimitRaw: Int = 0
     @AppStorage("stripMetadata") var stripMetadata: Bool = false
     @AppStorage("watchedFolders") var watchedFoldersJSON: String = "[]"
+    /// Local HTTP API: off by default (a user must explicitly opt in).
+    @AppStorage("apiEnabled") var apiEnabled: Bool = false
+    @AppStorage("apiPort") var apiPort: Int = 4499
 
     let folderWatcher = FolderWatcher()
+    let localAPIServer = LocalAPIServer()
 
     // MARK: - Floating drop zone
 
@@ -225,6 +229,14 @@ final class AppEnvironment: ObservableObject {
         // Restore the floating drop zone's visibility from last launch
         // without requiring the user to re-toggle it every time.
         updateDropZoneVisibility()
+        // Same "external trigger" wiring as the folder watcher above: an API
+        // call is not a manual UI action, so it must never update the user's
+        // default preset (updateDefaultPreset: false).
+        localAPIServer.onCompress = { [weak self] urls, preset in
+            self?.handleDrop(urls: urls, preset: preset, updateDefaultPreset: false) ?? 0
+        }
+        localAPIServer.jobsProvider = { [weak self] in self?.queue.jobs ?? [] }
+        if apiEnabled { localAPIServer.start(port: apiPort) }
     }
 
     func refreshLicenseStatus() { licenseStatus = licenseState.status() }
@@ -377,6 +389,31 @@ final class AppEnvironment: ObservableObject {
         } else {
             dropZonePanel?.orderOut(nil)
         }
+    }
+
+    // MARK: - Local HTTP API
+
+    /// Routes writes through here (same `@AppStorage`-doesn't-publish caveat
+    /// as the setters above) so the toggle in `AdvancedPanelView` refreshes
+    /// immediately, and so the listener starts/stops in lockstep with the
+    /// persisted flag.
+    func setAPIEnabled(_ enabled: Bool) {
+        objectWillChange.send()
+        apiEnabled = enabled
+        if enabled {
+            localAPIServer.start(port: apiPort)
+        } else {
+            localAPIServer.stop()
+        }
+    }
+
+    /// A port edit while the server is already running restarts the
+    /// listener on the new port (and rotates the token, same as any other
+    /// restart) rather than leaving it bound to the old one.
+    func setAPIPort(_ port: Int) {
+        objectWillChange.send()
+        apiPort = port
+        if apiEnabled { localAPIServer.start(port: apiPort) }
     }
 
     // MARK: - Completion confetti
