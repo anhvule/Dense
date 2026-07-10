@@ -56,6 +56,17 @@ public final class JobQueue: ObservableObject {
         pump()
     }
 
+    /// Appends a job that's already known to have failed before any
+    /// compression work could even be attempted — e.g. a deep-link path that
+    /// doesn't exist on disk. Skips `pending`/`pump()` entirely so it never
+    /// gets a chance to run; it shows up in the UI as a normal failed row
+    /// alongside real compression failures.
+    public func addFailed(url: URL, message: String) {
+        let job = Job(input: url, kind: .compress)
+        job.status = .failed(message: message)
+        jobs.append(job)
+    }
+
     public func cancelAll() {
         pending.removeAll()
         for (_, task) in tasks { task.cancel() }

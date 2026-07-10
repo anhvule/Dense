@@ -5,7 +5,10 @@ import UniformTypeIdentifiers
 struct MainView: View {
     @EnvironmentObject var env: AppEnvironment
     @ObservedObject var queue: JobQueue
-    @State private var dropRejected = false
+    /// Transient rejection banner text; `nil` hides it. Two producers: an
+    /// unsupported dropped file type (copy preserved verbatim) and an
+    /// unparseable `dense://` deep link.
+    @State private var rejectionBanner: String?
     @State private var showAdvanced = false
 
     var body: some View {
@@ -16,15 +19,15 @@ struct MainView: View {
                 Task {
                     let urls = await loadDroppedURLs(from: providers)
                     let accepted = env.handleDrop(urls: urls, preset: preset)
-                    dropRejected = accepted == 0 && !urls.isEmpty
+                    rejectionBanner = (accepted == 0 && !urls.isEmpty) ? "That file type isn't supported yet." : nil
                 }
             }
             if showAdvanced {
                 AdvancedPanelView().environmentObject(env)
                 WatchedFoldersView().environmentObject(env)
             }
-            if dropRejected {
-                Text("That file type isn't supported yet.")
+            if let rejectionBanner {
+                Text(rejectionBanner)
                     .font(.caption.weight(.medium))
                     .padding(.vertical, 6).padding(.horizontal, 12)
                     .background(Capsule().fill(.orange.opacity(0.15)))
@@ -60,9 +63,14 @@ struct MainView: View {
             Task {
                 let urls = await loadDroppedURLs(from: providers)
                 let accepted = env.handleDrop(urls: urls)
-                dropRejected = accepted == 0 && !urls.isEmpty
+                rejectionBanner = (accepted == 0 && !urls.isEmpty) ? "That file type isn't supported yet." : nil
             }
             return true
+        }
+        .onOpenURL { url in
+            if let banner = env.handleDeepLink(url: url) {
+                rejectionBanner = banner
+            }
         }
         .overlay(ConfettiView(trigger: env.confettiTrigger).allowsHitTesting(false))
     }

@@ -292,6 +292,42 @@ final class AppEnvironment: ObservableObject {
 
     func handleDrop(urls: [URL]) -> Int { handleDrop(urls: urls, preset: nil) }
 
+    // MARK: - Deep linking (dense://compress)
+
+    /// Handles a `dense://compress?path=...&preset=...` URL delivered via
+    /// `.onOpenURL`. A parse failure (bad scheme/host, no paths, bad preset,
+    /// bad path encoding) has no job to attach a failed row to, so it's
+    /// surfaced as a transient rejection banner instead — same mechanism
+    /// `MainView` already uses for unsupported dropped file types. Paths that
+    /// parse fine but don't exist on disk each get their own synthetic failed
+    /// row (existence is checked here, not in `DeepLink.parse`, which stays a
+    /// pure string parser); paths that do exist are routed through the normal
+    /// `handleDrop`, identical to a manual drag-and-drop.
+    /// - Returns: a rejection banner message to show, or `nil` if the link
+    ///   parsed successfully (individual missing paths still show as failed
+    ///   rows, not a banner).
+    @discardableResult
+    func handleDeepLink(url: URL) -> String? {
+        let link: DeepLink
+        do {
+            link = try DeepLink.parse(url)
+        } catch {
+            return "Invalid dense:// link."
+        }
+        var existing: [URL] = []
+        for path in link.paths {
+            if FileManager.default.fileExists(atPath: path.path) {
+                existing.append(path)
+            } else {
+                queue.addFailed(url: path, message: "File not found")
+            }
+        }
+        if !existing.isEmpty {
+            _ = handleDrop(urls: existing, preset: link.preset)
+        }
+        return nil
+    }
+
     // MARK: - Floating drop zone
 
     /// Routes writes through here (same `@AppStorage`-doesn't-publish
