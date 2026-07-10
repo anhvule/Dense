@@ -1,4 +1,6 @@
 import SwiftUI
+import AppKit
+import Combine
 import DenseCore
 
 @MainActor
@@ -6,6 +8,11 @@ final class AppEnvironment: ObservableObject {
     let queue: JobQueue
     let licenseState = LicenseState(store: KeychainStore())
     @Published var licenseStatus: LicenseStatus = .licensed
+    @AppStorage("dropZoneEnabled") private(set) var dropZoneEnabled: Bool = false
+    /// Bumped once per confetti burst; `ConfettiView` diffs this against its
+    /// last-seen value to fire a fresh burst. Never advances when
+    /// `NSWorkspace.accessibilityDisplayShouldReduceMotion` is on.
+    @Published var confettiTrigger: Int = 0
     @AppStorage("defaultPreset") var defaultPresetRaw: String = Preset.balanced.rawValue
     @AppStorage("useHEVC") var useHEVC: Bool = false
     @AppStorage("gifMode") var gifMode: Bool = false
@@ -31,6 +38,27 @@ final class AppEnvironment: ObservableObject {
     @AppStorage("watchedFolders") var watchedFoldersJSON: String = "[]"
 
     let folderWatcher = FolderWatcher()
+
+    // MARK: - Floating drop zone
+
+    private var dropZonePanel: DropZonePanel?
+
+    // MARK: - Completion confetti
+
+    /// IDs of `Job`s we've already attached a status subscription to, so a
+    /// re-scan of `queue.jobs` (fired whenever *any* job is added) only
+    /// subscribes to genuinely new jobs — resubscribing to an already-`.done`
+    /// job would replay its current status immediately and falsely look like
+    /// a fresh completion.
+    private var subscribedJobIDs = Set<UUID>()
+    private var jobStatusCancellables: [UUID: AnyCancellable] = [:]
+    private var queueJobsCancellable: AnyCancellable?
+    private var queueWasActive = false
+    /// Whether any job in the *current* batch (since the last idle→active
+    /// transition) has finished with `.done`. Reset whenever a fresh batch
+    /// starts (new adds arriving while the queue was idle) and whenever a
+    /// burst fires.
+    private var batchHadSuccess = false
 
     var defaultPreset: Preset {
         get { Preset(rawValue: defaultPresetRaw) ?? .balanced }
@@ -185,6 +213,10 @@ final class AppEnvironment: ObservableObject {
         // `watchedFolders` setter, so the watcher hasn't started yet — kick
         // it off once here for whatever folders were enabled on last launch.
         reconfigureFolderWatcher()
+        wireBatchCompletionTracking()
+        // Restore the floating drop zone's visibility from last launch
+        // without requiring the user to re-toggle it every time.
+        updateDropZoneVisibility()
     }
 
     func refreshLicenseStatus() { licenseStatus = licenseState.status() }
@@ -259,4 +291,83 @@ final class AppEnvironment: ObservableObject {
     }
 
     func handleDrop(urls: [URL]) -> Int { handleDrop(urls: urls, preset: nil) }
+
+    // MARK: - Floating drop zone
+
+    /// Routes writes through here (same `@AppStorage`-doesn't-publish
+    /// caveat as the setters above) so the header toggle button refreshes
+    /// immediately, and so panel creation/ordering happens in lockstep with
+    /// the persisted flag rather than relying on a separate call site to
+    /// remember to do it.
+    func setDropZoneEnabled(_ enabled: Bool) {
+        objectWillChange.send()
+        dropZoneEnabled = enabled
+        updateDropZoneVisibility()
+    }
+
+    /// Creates the panel lazily on first use, then just shows/hides it —
+    /// the panel (and its autosaved frame) persists for the life of the app
+    /// regardless of how many times this toggles. Closing the *main* window
+    /// never touches this: the panel is an independent `NSPanel`, not a
+    /// child window of the main `WindowGroup` window.
+    private func updateDropZoneVisibility() {
+        if dropZoneEnabled {
+            let panel = dropZonePanel ?? DropZonePanel(env: self)
+            dropZonePanel = panel
+            panel.orderFrontRegardless()
+        } else {
+            dropZonePanel?.orderOut(nil)
+        }
+    }
+
+    // MARK: - Completion confetti
+
+    /// Subscribes to `queue.$jobs` (fires on every `add`/`clearFinished`/
+    /// `cancelAll`) and, per-job, to `$status` — the latter is how we learn
+    /// about queued→running→done/failed transitions that don't themselves
+    /// change the `jobs` array reference.
+    private func wireBatchCompletionTracking() {
+        queueJobsCancellable = queue.$jobs.sink { [weak self] jobs in
+            guard let self else { return }
+            for job in jobs where !self.subscribedJobIDs.contains(job.id) {
+                self.subscribedJobIDs.insert(job.id)
+                // `dropFirst()`: a brand-new job's initial value is always
+                // `.queued`, which we don't care about — skipping it means
+                // this subscription only reacts to genuine later
+                // transitions, never to a replay of an old job's status.
+                self.jobStatusCancellables[job.id] = job.$status.dropFirst().sink { [weak self] status in
+                    guard let self else { return }
+                    if case .done = status { self.batchHadSuccess = true }
+                    self.evaluateBatchTransition()
+                }
+            }
+            self.evaluateBatchTransition()
+        }
+    }
+
+    private func evaluateBatchTransition() {
+        let jobs = queue.jobs
+        let activeNow = jobs.contains { job in
+            switch job.status {
+            case .queued, .running: return true
+            default: return false
+            }
+        }
+        if activeNow && !queueWasActive {
+            // A fresh batch just became active (new files dropped while the
+            // queue was idle) — forget whatever the previous, already
+            // celebrated (or not) batch achieved.
+            batchHadSuccess = false
+        }
+        if !activeNow && queueWasActive && !jobs.isEmpty && batchHadSuccess {
+            fireConfettiIfMotionAllowed()
+        }
+        if !activeNow { batchHadSuccess = false }
+        queueWasActive = activeNow
+    }
+
+    private func fireConfettiIfMotionAllowed() {
+        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
+        confettiTrigger &+= 1
+    }
 }

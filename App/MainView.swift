@@ -14,7 +14,7 @@ struct MainView: View {
             DestinationDockView(selected: Binding(
                 get: { env.defaultPreset }, set: { env.defaultPreset = $0 })) { preset, providers in
                 Task {
-                    let urls = await loadURLs(from: providers)
+                    let urls = await loadDroppedURLs(from: providers)
                     let accepted = env.handleDrop(urls: urls, preset: preset)
                     dropRejected = accepted == 0 && !urls.isEmpty
                 }
@@ -58,12 +58,13 @@ struct MainView: View {
         .frame(minWidth: 640, minHeight: 460)
         .onDrop(of: [UTType.fileURL], isTargeted: nil) { providers in
             Task {
-                let urls = await loadURLs(from: providers)
+                let urls = await loadDroppedURLs(from: providers)
                 let accepted = env.handleDrop(urls: urls)
                 dropRejected = accepted == 0 && !urls.isEmpty
             }
             return true
         }
+        .overlay(ConfettiView(trigger: env.confettiTrigger).allowsHitTesting(false))
     }
 
     private var header: some View {
@@ -79,6 +80,15 @@ struct MainView: View {
                 Button("Cancel all") { queue.cancelAll() }.buttonStyle(.borderless)
                 Button("Clear") { queue.clearFinished() }.buttonStyle(.borderless)
             }
+            Button {
+                env.setDropZoneEnabled(!env.dropZoneEnabled)
+            } label: {
+                Image(systemName: "circle.dashed.inset.filled")
+            }
+            .buttonStyle(.borderless)
+            .tint(Theme.accent)
+            .foregroundStyle(env.dropZoneEnabled ? Theme.accent : .secondary)
+            .help(env.dropZoneEnabled ? "Hide floating drop zone" : "Show floating drop zone")
             Button {
                 withAnimation(.easeInOut(duration: 0.2)) { showAdvanced.toggle() }
             } label: {
@@ -101,36 +111,42 @@ struct MainView: View {
         return "\(queue.jobs.count) files · saved \(ByteCountFormatter.string(fromByteCount: saved, countStyle: .file)) (−\(pct)%)"
     }
 
-    /// Loads dropped file URLs from NSItemProviders. The async bridge for
-    /// `NSItemProvider.loadItem` is fiddly to chain through `flatMap` (per the
-    /// brief's note), so this uses the classic completion-handler form,
-    /// wrapped per-provider in a checked continuation and joined with a
-    /// TaskGroup. Runs off the MainActor (item loading is I/O); results are
-    /// awaited back on the MainActor before touching `env`/state.
-    private func loadURLs(from providers: [NSItemProvider]) async -> [URL] {
-        let typeIdentifier = UTType.fileURL.identifier
-        return await withTaskGroup(of: URL?.self) { group in
-            for provider in providers {
-                group.addTask {
-                    guard provider.hasItemConformingToTypeIdentifier(typeIdentifier) else { return nil }
-                    return await withCheckedContinuation { (continuation: CheckedContinuation<URL?, Never>) in
-                        provider.loadItem(forTypeIdentifier: typeIdentifier, options: nil) { item, _ in
-                            if let data = item as? Data, let url = URL(dataRepresentation: data, relativeTo: nil) {
-                                continuation.resume(returning: url)
-                            } else if let url = item as? URL {
-                                continuation.resume(returning: url)
-                            } else {
-                                continuation.resume(returning: nil)
-                            }
+}
+
+/// Loads dropped file URLs from NSItemProviders. The async bridge for
+/// `NSItemProvider.loadItem` is fiddly to chain through `flatMap` (per the
+/// brief's note), so this uses the classic completion-handler form, wrapped
+/// per-provider in a checked continuation and joined with a TaskGroup. Runs
+/// off the MainActor (item loading is I/O); results are awaited back on the
+/// MainActor before touching `env`/state.
+///
+/// Shared by every drop target that routes into `AppEnvironment.handleDrop`
+/// — the main window's background drop (`MainView`), the destination dock
+/// (`DestinationDockView`), and the floating `DropZonePanel` — so all three
+/// resolve dropped items identically.
+func loadDroppedURLs(from providers: [NSItemProvider]) async -> [URL] {
+    let typeIdentifier = UTType.fileURL.identifier
+    return await withTaskGroup(of: URL?.self) { group in
+        for provider in providers {
+            group.addTask {
+                guard provider.hasItemConformingToTypeIdentifier(typeIdentifier) else { return nil }
+                return await withCheckedContinuation { (continuation: CheckedContinuation<URL?, Never>) in
+                    provider.loadItem(forTypeIdentifier: typeIdentifier, options: nil) { item, _ in
+                        if let data = item as? Data, let url = URL(dataRepresentation: data, relativeTo: nil) {
+                            continuation.resume(returning: url)
+                        } else if let url = item as? URL {
+                            continuation.resume(returning: url)
+                        } else {
+                            continuation.resume(returning: nil)
                         }
                     }
                 }
             }
-            var results: [URL] = []
-            for await url in group {
-                if let url { results.append(url) }
-            }
-            return results
         }
+        var results: [URL] = []
+        for await url in group {
+            if let url { results.append(url) }
+        }
+        return results
     }
 }
