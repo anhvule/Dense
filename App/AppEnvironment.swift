@@ -13,6 +13,14 @@ final class AppEnvironment: ObservableObject {
     /// last-seen value to fire a fresh burst. Never advances when
     /// `NSWorkspace.accessibilityDisplayShouldReduceMotion` is on.
     @Published var confettiTrigger: Int = 0
+    /// Transient rejection banner text; `nil` hides it. Rendered only by
+    /// `MainView` (gated users see the license gate instead, which is
+    /// correct — deep links are ignored there anyway). Producers: an
+    /// unsupported dropped file type and an unparseable `dense://` deep link
+    /// (the latter written by `DenseApp`'s `.onOpenURL` closure, which
+    /// assigns `handleDeepLink`'s result unconditionally so a successful
+    /// link clears any stale banner).
+    @Published var rejectionBanner: String?
     @AppStorage("defaultPreset") var defaultPresetRaw: String = Preset.balanced.rawValue
     @AppStorage("useHEVC") var useHEVC: Bool = false
     @AppStorage("gifMode") var gifMode: Bool = false
@@ -295,19 +303,30 @@ final class AppEnvironment: ObservableObject {
     // MARK: - Deep linking (dense://compress)
 
     /// Handles a `dense://compress?path=...&preset=...` URL delivered via
-    /// `.onOpenURL`. A parse failure (bad scheme/host, no paths, bad preset,
-    /// bad path encoding) has no job to attach a failed row to, so it's
-    /// surfaced as a transient rejection banner instead — same mechanism
-    /// `MainView` already uses for unsupported dropped file types. Paths that
-    /// parse fine but don't exist on disk each get their own synthetic failed
-    /// row (existence is checked here, not in `DeepLink.parse`, which stays a
-    /// pure string parser); paths that do exist are routed through the normal
+    /// `.onOpenURL` (attached in `DenseApp` so links reach this handler
+    /// regardless of which branch — license gate or main UI — is showing).
+    /// A parse failure (bad scheme/host, no paths, bad preset, bad path
+    /// encoding) has no job to attach a failed row to, so it's surfaced as a
+    /// transient rejection banner instead — same mechanism `MainView` already
+    /// uses for unsupported dropped file types. Paths that parse fine but
+    /// don't exist on disk each get their own synthetic failed row (existence
+    /// is checked here, not in `DeepLink.parse`, which stays a pure string
+    /// parser); paths that do exist are routed through the normal
     /// `handleDrop`, identical to a manual drag-and-drop.
     /// - Returns: a rejection banner message to show, or `nil` if the link
     ///   parsed successfully (individual missing paths still show as failed
-    ///   rows, not a banner).
+    ///   rows, not a banner) or was ignored because the trial expired.
     @discardableResult
     func handleDeepLink(url: URL) -> String? {
+        // Deliberate product behavior: a locked app processes nothing. When
+        // the trial has expired the user sees the license gate, and deep
+        // links are ignored outright (no banner — the banner only renders in
+        // MainView, which a gated user never sees) rather than queueing work
+        // behind the paywall.
+        if case .trialExpired = licenseStatus {
+            NSLog("Deep link ignored: trial expired")
+            return nil
+        }
         let link: DeepLink
         do {
             link = try DeepLink.parse(url)
@@ -323,7 +342,11 @@ final class AppEnvironment: ObservableObject {
             }
         }
         if !existing.isEmpty {
-            _ = handleDrop(urls: existing, preset: link.preset)
+            // Same reasoning as the folder watcher's call above: a deep
+            // link's preset is a per-invocation choice made by whoever built
+            // the link, not an explicit user action in the UI — it must not
+            // silently change what preset the user's next manual drop uses.
+            _ = handleDrop(urls: existing, preset: link.preset, updateDefaultPreset: false)
         }
         return nil
     }

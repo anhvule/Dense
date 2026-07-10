@@ -8,6 +8,12 @@ import Foundation
 /// paths exist, that's the app layer's job (surfacing a failed row per path
 /// that turns out missing). Keeping existence-checking out of here is what
 /// makes the parsing logic unit testable without touching disk.
+///
+/// Encoding note: per RFC 3986, `+` in a query value is a literal plus sign
+/// — the plus-means-space convention belongs to
+/// `application/x-www-form-urlencoded` form data, not generic URLs, and
+/// `URLComponents` follows the RFC. Link builders must encode spaces as
+/// `%20`, never `+`.
 public struct DeepLink: Equatable {
     public let paths: [URL]
     public let preset: Preset?
