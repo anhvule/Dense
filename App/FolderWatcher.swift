@@ -27,7 +27,7 @@ final class FolderWatcher {
     private struct Target {
         let id: UUID
         let path: String
-        let preset: Preset
+        var preset: Preset
     }
 
     /// Called with newly-accepted, size-stable files and the preset
@@ -45,15 +45,31 @@ final class FolderWatcher {
     private var generationByFolder: [UUID: Int] = [:]
     private var targets: [UUID: Target] = [:]
 
-    /// Rebuilds all watch sources from scratch for the given folder list.
-    /// Safe to call on every config edit (add/remove/toggle/preset change) —
-    /// existing sources are torn down first. Folders that are disabled or
-    /// whose path no longer resolves to a directory are silently skipped
-    /// here (the UI surfaces the missing-folder case with a warning icon;
-    /// this layer just never starts a source for it, no crash).
+    /// Applies a config edit *differentially* (via the pure, unit-tested
+    /// `WatchReconfigurePlan`): watchers whose id/path/enabled state didn't
+    /// change are left completely untouched — their DispatchSource, `seen`
+    /// snapshot, and debounce generation all survive, so editing folder B's
+    /// preset can never drop a file that's mid-arrival in folder A (a full
+    /// teardown would re-seed A's `seen` with the half-arrived file in it,
+    /// permanently skipping it). Preset-only changes on a kept watcher are
+    /// applied in place. Only removed/disabled/path-changed folders are
+    /// stopped, and only genuinely new ones are started (and freshly
+    /// seeded). Folders that are disabled or whose path no longer resolves
+    /// to a directory are silently skipped here (the UI surfaces the
+    /// missing-folder case with a warning icon; this layer just never
+    /// starts a source for it, no crash).
     func reconfigure(folders: [WatchedFolder]) {
-        stopAll()
-        for folder in folders where folder.enabled {
+        let plan = WatchReconfigurePlan.plan(current: targets.mapValues(\.path), desired: folders)
+        for id in plan.stop { stop(id: id) }
+        for id in plan.keep {
+            // Preset may have changed even though the watcher survives —
+            // update it in place so the next enqueue uses the new value.
+            if let folder = folders.first(where: { $0.id == id }),
+               let preset = Preset(rawValue: folder.presetRaw) {
+                targets[id]?.preset = preset
+            }
+        }
+        for folder in plan.start {
             guard let preset = Preset(rawValue: folder.presetRaw) else { continue }
             var isDir: ObjCBool = false
             guard FileManager.default.fileExists(atPath: folder.path, isDirectory: &isDir), isDir.boolValue else {
@@ -64,11 +80,15 @@ final class FolderWatcher {
     }
 
     func stopAll() {
-        for (_, source) in sources { source.cancel() }
-        sources.removeAll()
-        seenByFolder.removeAll()
-        generationByFolder.removeAll()
-        targets.removeAll()
+        for id in Array(sources.keys) { stop(id: id) }
+    }
+
+    private func stop(id: UUID) {
+        sources[id]?.cancel()
+        sources[id] = nil
+        seenByFolder[id] = nil
+        generationByFolder[id] = nil
+        targets[id] = nil
     }
 
     private func start(id: UUID, path: String, preset: Preset) {
@@ -80,6 +100,14 @@ final class FolderWatcher {
         // Seed `seen` with everything already in the folder at watch-start
         // so pre-existing files are never mistaken for new arrivals — only
         // files that show up *after* this point get compressed.
+        //
+        // DESIGNED BEHAVIOR, not a bug: this seeding also runs fresh on
+        // every app launch, so files that were added to a watched folder
+        // while the app was closed are NOT auto-compressed at launch. That
+        // is deliberate — it prevents a surprise mass-compression of a
+        // backlog (imagine pointing this at ~/Downloads and coming back
+        // from a week off). Only arrivals observed by a live watcher are
+        // ever enqueued.
         seenByFolder[id] = Set(currentContents(of: path))
 
         let source = DispatchSource.makeFileSystemObjectSource(fileDescriptor: fd, eventMask: .write, queue: .main)

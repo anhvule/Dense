@@ -230,6 +230,29 @@ confirm each one is exactly as left:
 - [ ] Filename suffix text
 - [ ] Move-originals-to-Trash toggle
 - [ ] GIF mode toggle, fps, and width steppers
+- [ ] Watched folders list (paths, per-folder presets, enable toggles)
+
+## 11. Folder watching
+
+- [ ] **Add a watched folder** via Advanced → Watched folders → "Add folder…",
+      then copy a video into it. Expected: after a ~2s debounce (plus a 1s
+      size-stability wait), the file is auto-enqueued and a `-compressed`
+      output appears next to it. The output itself must NOT be re-enqueued
+      (no compress loop).
+- [ ] **Pre-existing files are ignored** — files already in the folder when
+      watching starts are never compressed; only new arrivals are.
+- [ ] **Relaunch fresh-seeding is designed behavior, not a bug** — files
+      added to a watched folder *while the app was closed* are NOT
+      auto-compressed on the next launch (deliberate: prevents surprise
+      mass-compression of a backlog). Do not file this as a failure.
+- [ ] **Per-folder preset** — set a watched folder to Small File, drop a clip
+      in, and confirm the output reflects that preset while the dock's
+      selected preset is unchanged.
+- [ ] **Editing one folder doesn't disturb another** — while a file is mid-copy
+      into folder A, toggle/edit folder B; the folder-A file must still be
+      picked up and compressed once its copy completes.
+- [ ] **Missing folder** — delete a watched folder on disk, reopen the panel:
+      row shows a warning icon, watching is skipped, no crash.
 
 ---
 
