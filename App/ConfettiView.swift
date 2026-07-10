@@ -67,9 +67,7 @@ final class ConfettiHostView: NSView {
         emitter.emitterSize = CGSize(width: bounds.width * 0.6, height: 1)
         emitter.emitterShape = .line
         emitter.renderMode = .unordered
-        emitter.emitterCells = Self.colors.flatMap { color in
-            [Self.makeCell(color: color, rounded: true), Self.makeCell(color: color, rounded: false)]
-        }
+        emitter.emitterCells = Self.particleAssets.map { Self.makeCell(color: $0.color, image: $0.image) }
         emitter.beginTime = CACurrentMediaTime()
         hostLayer.addSublayer(emitter)
 
@@ -94,7 +92,15 @@ final class ConfettiHostView: NSView {
         NSColor(red: 0.937, green: 0.702, blue: 0.204, alpha: 1),
     ]
 
-    private static func makeCell(color: NSColor, rounded: Bool) -> CAEmitterCell {
+    /// The six particle bitmaps (3 colors × 2 shapes), rendered exactly once
+    /// — the palette is a compile-time constant, so regenerating these tiny
+    /// CGImages on every burst would be pointless churn.
+    private static let particleAssets: [(color: NSColor, image: CGImage?)] = colors.flatMap { color in
+        [(color, shapeImage(color: color, rounded: true)),
+         (color, shapeImage(color: color, rounded: false))]
+    }
+
+    private static func makeCell(color: NSColor, image: CGImage?) -> CAEmitterCell {
         let cell = CAEmitterCell()
         cell.birthRate = 9
         cell.lifetime = 1.1
@@ -112,7 +118,7 @@ final class ConfettiHostView: NSView {
         cell.scaleRange = 0.2
         cell.alphaSpeed = -0.6
         cell.color = color.cgColor
-        cell.contents = Self.shapeImage(color: color, rounded: rounded)
+        cell.contents = image
         return cell
     }
 

@@ -329,6 +329,13 @@ final class AppEnvironment: ObservableObject {
     private func wireBatchCompletionTracking() {
         queueJobsCancellable = queue.$jobs.sink { [weak self] jobs in
             guard let self else { return }
+            // Prune subscriptions for jobs that have left the queue
+            // (`clearFinished`, etc.) so these collections track the live
+            // job set instead of growing for the life of the app; dropping
+            // an AnyCancellable also cancels its subscription.
+            let currentIDs = Set(jobs.map(\.id))
+            self.subscribedJobIDs.formIntersection(currentIDs)
+            self.jobStatusCancellables = self.jobStatusCancellables.filter { currentIDs.contains($0.key) }
             for job in jobs where !self.subscribedJobIDs.contains(job.id) {
                 self.subscribedJobIDs.insert(job.id)
                 // `dropFirst()`: a brand-new job's initial value is always
