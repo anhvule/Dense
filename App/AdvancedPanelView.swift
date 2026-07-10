@@ -39,7 +39,12 @@ struct AdvancedPanelView: View {
                     Text("Custom folder").tag(true)
                 }.labelsHidden().frame(width: 150)
                 label("Suffix", systemImage: "textformat")
-                TextField("-compressed", text: $env.outputSuffix).frame(width: 150)
+                // Routed through setOutputSuffix (not $env.outputSuffix)
+                // so the folder watcher's own-output loop guard re-syncs
+                // on every keystroke.
+                TextField("-compressed", text: Binding(
+                    get: { env.outputSuffix },
+                    set: { env.setOutputSuffix($0) })).frame(width: 150)
             }
             if env.outputToCustomFolder {
                 GridRow {

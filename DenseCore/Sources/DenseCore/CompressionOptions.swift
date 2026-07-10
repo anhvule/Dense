@@ -87,6 +87,16 @@ public enum ResolutionCap: String, CaseIterable, Identifiable, Codable {
 }
 
 public struct CompressionOptions: Equatable, Codable {
+    /// The fallback-applied output suffix: an empty user setting means "use
+    /// the default", never "no suffix". Shared by the App's options builder
+    /// and the folder-watcher loop guard so the suffix that names outputs
+    /// and the suffix that recognizes them as our own can never diverge —
+    /// a diverged pair would let the watcher re-enqueue its own outputs
+    /// forever.
+    public static func effectiveSuffix(_ raw: String) -> String {
+        raw.isEmpty ? "-compressed" : raw
+    }
+
     public var preset: Preset
     public var customTargetMB: Double?
     public var codec: Codec

@@ -59,7 +59,7 @@ final class AppEnvironment: ObservableObject {
         opts.resolutionCap = ResolutionCap(rawValue: resolutionCapRaw)
         opts.customTargetMB = Double(customTargetMBText.replacingOccurrences(of: ",", with: "."))
             .flatMap { $0 > 0 ? $0 : nil }
-        opts.outputSuffix = outputSuffix.isEmpty ? "-compressed" : outputSuffix
+        opts.outputSuffix = CompressionOptions.effectiveSuffix(outputSuffix)
         opts.fpsCap = fpsCapRaw == 0 ? nil : fpsCapRaw
         opts.threadLimit = threadLimitRaw == 0 ? nil : threadLimitRaw
         opts.stripMetadata = stripMetadata
@@ -95,6 +95,12 @@ final class AppEnvironment: ObservableObject {
 
     func addWatchedFolder(path: String) {
         var folders = watchedFolders
+        // Dedupe on the standardized path so picking an already-watched
+        // folder again (possibly via a differently-spelled path, e.g. with
+        // a trailing slash or "..") doesn't create a second watcher for
+        // the same directory.
+        let standardized = (path as NSString).standardizingPath
+        guard !folders.contains(where: { ($0.path as NSString).standardizingPath == standardized }) else { return }
         folders.append(WatchedFolder(path: path, presetRaw: defaultPresetRaw, enabled: true))
         watchedFolders = folders
     }
@@ -119,8 +125,24 @@ final class AppEnvironment: ObservableObject {
     }
 
     private func reconfigureFolderWatcher() {
-        folderWatcher.outputSuffix = outputSuffix
+        // Always the EFFECTIVE suffix (empty falls back to "-compressed"),
+        // matching what `options` actually names outputs with — passing a
+        // raw empty string here would disable the watcher's loop guard
+        // while outputs still get "-compressed", an unbounded recompress
+        // loop.
+        folderWatcher.outputSuffix = CompressionOptions.effectiveSuffix(outputSuffix)
         folderWatcher.reconfigure(folders: watchedFolders)
+    }
+
+    /// Suffix edits must route through here (not write `outputSuffix`
+    /// directly): same objectWillChange caveat as `setCustomOutputPath`,
+    /// plus the folder watcher's own-output loop guard has to be re-synced
+    /// immediately — a stale suffix would make the watcher treat freshly
+    /// written outputs as new arrivals.
+    func setOutputSuffix(_ suffix: String) {
+        objectWillChange.send()
+        outputSuffix = suffix
+        folderWatcher.outputSuffix = CompressionOptions.effectiveSuffix(suffix)
     }
 
     /// @AppStorage on a plain ObservableObject doesn't publish changes, so

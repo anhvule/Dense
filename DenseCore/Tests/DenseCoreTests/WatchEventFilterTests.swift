@@ -64,6 +64,23 @@ final class WatchEventFilterTests: XCTestCase {
         XCTAssertEqual(result.map(\.lastPathComponent), ["movie.mp4"])
     }
 
+    func testEffectiveSuffixFallsBackToDefaultWhenEmpty() {
+        XCTAssertEqual(CompressionOptions.effectiveSuffix(""), "-compressed")
+        XCTAssertEqual(CompressionOptions.effectiveSuffix("-tiny"), "-tiny")
+    }
+
+    func testEmptyRawSuffixStillGuardsAgainstDefaultSuffixedOutputs() {
+        // Pins the caller contract: the watcher must construct the filter
+        // with the EFFECTIVE suffix, so even when the user's raw setting is
+        // empty (outputs then get "-compressed" via the same fallback in
+        // CompressionOptions), our own outputs are still recognized and
+        // skipped — no recompress loop.
+        let filter = WatchEventFilter(outputSuffix: CompressionOptions.effectiveSuffix(""))
+        let paths = ["/tmp/watch/movie-compressed.mp4", "/tmp/watch/movie.mp4"]
+        let result = filter.jobCandidates(from: paths, seen: [])
+        XCTAssertEqual(result.map(\.lastPathComponent), ["movie.mp4"])
+    }
+
     func testGifPdfAndImageExtensionsAreAllAccepted() {
         let filter = WatchEventFilter(outputSuffix: "-compressed")
         let paths = ["/tmp/watch/a.gif", "/tmp/watch/b.pdf", "/tmp/watch/c.png", "/tmp/watch/d.heic"]

@@ -35,9 +35,14 @@ final class FolderWatcher {
     /// to `handleDrop(urls:preset:)`.
     var onNewFiles: (_ urls: [URL], _ preset: Preset) -> Void = { _, _ in }
 
-    /// Kept in sync with the user's current output-suffix setting so the
-    /// loop guard (skip our own outputs) always reflects the live suffix,
-    /// even if the user changes it after folders are already being watched.
+    /// The EFFECTIVE output suffix for the own-output loop guard (skip
+    /// files we ourselves wrote). Always non-empty: `AppEnvironment` writes
+    /// it from two places — `setOutputSuffix(_:)` (every suffix-field
+    /// keystroke, so a mid-watch edit can't leave the guard stale) and
+    /// `reconfigureFolderWatcher()` (launch + every watched-folder config
+    /// edit) — and both apply `CompressionOptions.effectiveSuffix`, so an
+    /// empty user setting arrives here as "-compressed", matching what
+    /// outputs are actually named.
     var outputSuffix: String = "-compressed"
 
     private var sources: [UUID: DispatchSourceFileSystemObject] = [:]
