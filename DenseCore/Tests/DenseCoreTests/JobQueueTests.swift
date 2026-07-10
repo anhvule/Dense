@@ -203,6 +203,22 @@ final class JobQueueTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: tmp.path), "original should be in Trash")
     }
 
+    /// `addFailed` is for jobs that are already known to have failed before
+    /// any compression work is attempted (e.g. a deep-link path that doesn't
+    /// exist) — it must append a `.failed` row synchronously, without ever
+    /// touching `pending`/`pump()`.
+    func testAddFailedAppendsFailedJobSynchronously() throws {
+        let queue = try makeQueue()
+        let missing = URL(fileURLWithPath: "/nonexistent/path/clip.mp4")
+        queue.addFailed(url: missing, message: "File not found")
+        XCTAssertEqual(queue.jobs.count, 1)
+        XCTAssertEqual(queue.jobs[0].input, missing)
+        guard case .failed(let message) = queue.jobs[0].status else {
+            XCTFail("expected failed, got \(queue.jobs[0].status)"); return
+        }
+        XCTAssertEqual(message, "File not found")
+    }
+
     func testExtractAudioJobRunsThroughQueue() async throws {
         let queue = try makeQueue()
         queue.add(urls: [fixtureURL("clip-2s.mp4")], kind: .extractAudio, options: .init(preset: .balanced),

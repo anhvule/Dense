@@ -42,3 +42,7 @@ targets:
         SUFeedURL: https://REPLACE-AT-LAUNCH.example/appcast.xml
         SUPublicEDKey: REPLACE-AT-LAUNCH-EDKEY
         SUEnableAutomaticChecks: true
+        CFBundleURLTypes:
+          - CFBundleURLName: app.dense.mac
+            CFBundleURLSchemes:
+              - dense

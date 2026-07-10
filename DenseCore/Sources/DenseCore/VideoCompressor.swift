@@ -22,14 +22,25 @@ public struct VideoCompressor {
         self.probe = MediaProbe(ffprobeURL: ffprobeURL)
     }
 
+    /// Output extension: codec is consulted first (VP9 always writes
+    /// `.webm`, since that's the only container it's muxed into here,
+    /// regardless of the `container` setting), falling back to the
+    /// `container` setting for h264/hevc.
     public static func outputURL(for input: URL, outputDir: URL?, options: CompressionOptions) -> URL {
         let stem = input.deletingPathExtension().lastPathComponent
         let dir = outputDir ?? input.deletingLastPathComponent()
-        return dir.appendingPathComponent("\(stem)\(options.outputSuffix).\(options.container.rawValue)")
+        let ext = options.codec == .vp9 ? "webm" : options.container.rawValue
+        return dir.appendingPathComponent("\(stem)\(options.outputSuffix).\(ext)")
     }
 
     public func compress(input: URL, options: CompressionOptions, outputDir: URL? = nil,
                          progress: @escaping (Double) -> Void) async throws -> CompressionResult {
+        if options.codec == .vp9 {
+            let available = await EncoderAvailability.isAvailable("libvpx-vp9", ffmpegURL: ffmpeg.binaryURL)
+            guard available else {
+                throw CompressError.ffmpegFailed(exitCode: -1, lastLine: "VP9 encoder unavailable in bundled FFmpeg")
+            }
+        }
         let info = try await probe.probe(url: input)
         if let closest = TargetFeasibility.closestAchievableMB(info: info, options: options) {
             throw CompressError.unreachableTarget(closestMB: closest)

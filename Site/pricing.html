@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pricing — Dense</title>
+  <meta name="description" content="Dense is $29 once, $19 at launch. No subscription. 7-day full-feature trial included.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-nav">
+    <div class="nav-inner">
+      <a href="index.html" class="logo">Dense</a>
+      <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+      <nav class="nav-links">
+        <a href="index.html#features">Features</a>
+        <a href="pricing.html">Pricing</a>
+        <a href="docs/index.html">Docs</a>
+        <a href="changelog.html">Changelog</a>
+        <a href="#" class="btn-download"><!-- REPLACE-AT-LAUNCH: link to signed DMG --> Download</a>
+      </nav>
+    </div>
+  </header>
+
+  <main style="max-width:960px;">
+    <span class="eyebrow">Pricing</span>
+    <h1 style="font-size:clamp(1.8rem,5vw,2.6rem);">One price. Yours forever.</h1>
+    <p class="sub">No subscription, no recurring charge, no per-month tax on your files getting smaller.</p>
+
+    <div class="price-card">
+      <span class="price-badge">$19 launch price</span>
+      <div class="price-amount">$29<span class="strike">one-time</span></div>
+      <p class="price-note">Single payment. Every 1.x update included, forever.</p>
+      <ul class="price-list">
+        <li>Video, image, GIF, and PDF compression</li>
+        <li>Target-size mode, resolution caps, audio removal</li>
+        <li>Video → GIF and audio extraction</li>
+        <li>Batch queue with real cancellation</li>
+        <li>All free updates within the 1.x line</li>
+        <li><!-- LICENSE-TERMS-TBD: confirm number of Macs per license before launch -->Licensed for use on 2 Macs</li>
+      </ul>
+      <a href="#" class="buy-btn"><!-- REPLACE-AT-LAUNCH: link to checkout --> Buy Dense — $19</a>
+      <p class="buy-fineprint">7-day free trial available first. No credit card required to try it.</p>
+    </div>
+  </main>
+
+  <section aria-labelledby="trial-head">
+    <div class="wrap section-head">
+      <span class="eyebrow">Trial</span>
+      <h2 id="trial-head">Try everything for 7 days</h2>
+      <p>Download Dense and every feature — video, image, GIF, and PDF compression, batch queue, all presets — is fully unlocked for a week. No feature gating, no watermarks, no signup wall. When the trial ends, compression pauses until you activate a license. Nothing you've already compressed is touched.</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="included-head">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">What's included</span>
+        <h2 id="included-head">Every feature, one license</h2>
+        <p>There's no "Pro" tier hiding features behind a second purchase.</p>
+      </div>
+      <div class="grid">
+        <div class="card"><h3>All compression features</h3><p>Video, image, GIF optimization, video-to-GIF, MP3 extraction, and PDF compression — every shipped feature, no upsell.</p></div>
+        <div class="card"><h3>All 1.x updates</h3><p>Bug fixes and new features released under the 1.x line ship free via Sparkle auto-updates.</p></div>
+        <div class="card"><h3>Two Macs</h3><p><!-- LICENSE-TERMS-TBD: confirm before launch -->Activate on up to two Macs you own, e.g. a desktop and a laptop.</p></div>
+        <div class="card"><h3>Offline forever</h3><p>Compression never touches the network. Only license activation does.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="license-faq-head">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">License FAQ</span>
+        <h2 id="license-faq-head">Good to know</h2>
+      </div>
+      <div class="faq">
+        <details>
+          <summary>Is this really a one-time purchase?</summary>
+          <p>Yes. $29 ($19 for early customers) once. No subscription, no renewal, no expiring license.</p>
+        </details>
+        <details>
+          <summary>Do future major versions cost extra?</summary>
+          <p>All updates within the 1.x line are free. A future paid upgrade for a major new version (2.0) hasn't been decided — nothing is being planned to break what you already own.</p>
+        </details>
+        <details>
+          <summary>How many Macs can I use it on?</summary>
+          <!-- LICENSE-TERMS-TBD: confirm exact seat count before launch -->
+          <p>The license is currently planned to cover two Macs per purchase. This will be confirmed before checkout goes live.</p>
+        </details>
+        <details>
+          <summary>What happens when the trial ends?</summary>
+          <p>Dense stops running new compressions until you enter a license key. Anything you already compressed stays exactly as it is.</p>
+        </details>
+        <details>
+          <summary>What if I want a refund?</summary>
+          <!-- REFUND-POLICY-TBD: confirm exact refund window/terms before launch -->
+          <p>Refunds are available within a reasonable window of purchase if Dense isn't a fit — full terms will be posted at launch.</p>
+        </details>
+        <details>
+          <summary>Does the license work offline?</summary>
+          <p>Once activated, yes — Dense checks in only occasionally, and compression itself never requires a connection.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>macOS 13+ · Apple Silicon &amp; Intel. Dense uses <a href="https://ffmpeg.org">FFmpeg</a> under the GPL, run as a separate process — build sources: <a href="https://evermeet.cx/ffmpeg/">evermeet.cx (x86_64)</a> and <a href="https://osxexperts.net">osxexperts.net (arm64)</a>.</p>
+      <p>&copy; 2026 Lê Anh Vũ. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="nav.js"></script>
+</body>
+</html>
