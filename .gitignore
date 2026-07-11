@@ -6,3 +6,6 @@ DerivedData/
 *.xcodeproj
 .DS_Store
 Fixtures/
+integrations/raycast/node_modules/
+integrations/raycast/dist/
+integrations/raycast/raycast-env.d.ts
