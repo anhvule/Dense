@@ -2,6 +2,8 @@
 
 Strategy rulebook + agent execution framework. Feed the relevant section to a sub-agent verbatim; every phase carries explicit entry gates, decision criteria, and prompt templates. Written 2026-07-11 against the real repo state — agents must treat §0 as ground truth and never rebuild what exists.
 
+> **SCOPE DECISION (user, 2026-07-11): Dense is macOS-native only.** The iOS app and web tool described in §2/§4 (Phases W and I, Gates G1/G2) are REJECTED, not deferred — do not plan, build, or propose them. Those sections are retained solely as a record of the analysis. All post-launch investment goes into the macOS product and its audience (v1.1 backlog, savings ledger, requested features).
+
 ---
 
 ## 0. Ground truth (do not rebuild)
