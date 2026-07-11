@@ -36,6 +36,10 @@ final class AppEnvironment: ObservableObject {
     @AppStorage("gifFps") var gifFps: Int = 12
     @AppStorage("gifWidth") var gifWidth: Int = 480
     @AppStorage("imageQuality") var imageQuality: Double = 0.75
+    /// Opt-in, off by default: renames the OUTPUT file of a successful
+    /// `.image` job using on-device Vision classification (see
+    /// `SmartRename`). Never touches originals.
+    @AppStorage("smartRenameEnabled") var smartRenameEnabled: Bool = false
     @AppStorage("pdfQualityRaw") var pdfQualityRaw: String = PDFQuality.balanced.rawValue
     @AppStorage("didMigrateHEVCToContainer") private var didMigrateHEVCToContainer: Bool = false
     /// 0 = Off; otherwise the fps cap passed straight to `CompressionOptions.fpsCap`.
@@ -440,7 +444,12 @@ final class AppEnvironment: ObservableObject {
                 // transitions, never to a replay of an old job's status.
                 self.jobStatusCancellables[job.id] = job.$status.dropFirst().sink { [weak self] status in
                     guard let self else { return }
-                    if case .done = status { self.batchHadSuccess = true }
+                    if case .done(let result) = status {
+                        self.batchHadSuccess = true
+                        if job.kind == .image, self.smartRenameEnabled {
+                            Task { await self.applySmartRename(job: job, result: result) }
+                        }
+                    }
                     self.evaluateBatchTransition()
                 }
             }
@@ -472,5 +481,23 @@ final class AppEnvironment: ObservableObject {
     private func fireConfettiIfMotionAllowed() {
         guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
         confettiTrigger &+= 1
+    }
+
+    // MARK: - Smart rename
+
+    /// Runs `SmartRename` on a freshly-completed `.image` job's output and,
+    /// if it produced a different filename, publishes an updated
+    /// `CompressionResult` so the UI (file row's filename label, "reveal in
+    /// Finder" button) reflects the rename. Re-checks that `job.status`
+    /// still matches the `result` we started from before overwriting it —
+    /// classification is async and takes a moment, so this guards against a
+    /// stale write racing some other mutation of `job.status` in between
+    /// (there isn't one today, but this keeps the write honest regardless).
+    private func applySmartRename(job: Job, result: CompressionResult) async {
+        let renamedURL = await SmartRename.renameIfPossible(outputURL: result.outputURL)
+        guard renamedURL != result.outputURL else { return }
+        guard case .done(let current) = job.status, current.outputURL == result.outputURL else { return }
+        job.status = .done(CompressionResult(outputURL: renamedURL, inputBytes: current.inputBytes,
+                                              outputBytes: current.outputBytes))
     }
 }

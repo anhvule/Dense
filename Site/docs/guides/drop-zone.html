@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Floating Drop Zone (Coming Soon) — Dense Docs</title>
-  <meta name="description" content="A floating drop zone is planned for Dense but not yet shipped.">
+  <title>Floating Drop Zone — Dense Docs</title>
+  <meta name="description" content="A small always-on-top drop target that floats above every window, so you can compress a file without switching to Dense first.">
   <link rel="stylesheet" href="../../style.css">
 </head>
 <body>
@@ -33,24 +33,28 @@
         <li><a href="video-to-gif.html">Video to GIF</a></li>
         <li><a href="extract-mp3.html">Extract MP3</a></li>
         <li><a href="compress-pdf.html">Compress a PDF</a></li>
-      </ul>
-      <h4>Coming Soon</h4>
-      <ul>
-        <li><a href="folder-monitoring.html">Folder Monitoring <span class="soon-tag">Soon</span></a></li>
-        <li><a href="drop-zone.html" class="active">Floating Drop Zone <span class="soon-tag">Soon</span></a></li>
-        <li><a href="deep-linking.html">Deep Linking <span class="soon-tag">Soon</span></a></li>
-        <li><a href="http-api.html">HTTP API <span class="soon-tag">Soon</span></a></li>
-        <li><a href="raycast.html">Raycast Extension <span class="soon-tag">Soon</span></a></li>
+        <li><a href="folder-monitoring.html">Folder Monitoring</a></li>
+        <li><a href="drop-zone.html" class="active">Floating Drop Zone</a></li>
+        <li><a href="deep-linking.html">Deep Linking</a></li>
+        <li><a href="http-api.html">HTTP API</a></li>
+        <li><a href="raycast.html">Raycast Extension</a></li>
       </ul>
     </aside>
 
     <div class="docs-content">
-      <h1>Floating Drop Zone <span class="badge badge-soon">Coming soon</span></h1>
-      <p class="lede">Not shipped yet — this page is a placeholder for a planned feature.</p>
-      <div class="soon-note">
-        <p>The idea: a small, always-on-top drop target that floats above every other window, so you can drag a file onto Dense without switching away from what you're doing.</p>
-        <p>This isn't in the current release. Check the <a href="../../changelog.html">changelog</a> for when it lands.</p>
-      </div>
+      <h1>Floating Drop Zone</h1>
+      <p class="lede">A small, always-on-top circular drop target that floats above every window and every Space, so you can drag a file onto Dense without switching away from what you're doing.</p>
+
+      <h2>Turning it on</h2>
+      <p>Click the drop-zone icon in the main window's header to show or hide it. It defaults to the top-right corner of your screen the first time it appears; drag it anywhere afterward and Dense remembers the new position across relaunches.</p>
+
+      <h2>Using it</h2>
+      <p>Drop a file (or several) directly onto the circle. It compresses using whatever preset is currently selected on the destination dock — the same behavior as dropping onto the main window's background, not a specific dock card.</p>
+
+      <div class="tip">The drop zone stays visible even when Dense isn't the active app, and follows you across every Space, including other apps' full-screen Spaces — it's built to be there exactly when a drag needs somewhere to land.</div>
+
+      <h2>Closing Dense's main window</h2>
+      <p>The floating panel is independent of the main window, so closing the main window doesn't hide it — toggle it off from the header the next time you bring the main window forward.</p>
     </div>
   </div>
 

@@ -33,14 +33,11 @@
         <li><a href="video-to-gif.html">Video to GIF</a></li>
         <li><a href="extract-mp3.html">Extract MP3</a></li>
         <li><a href="compress-pdf.html">Compress a PDF</a></li>
-      </ul>
-      <h4>Coming Soon</h4>
-      <ul>
-        <li><a href="folder-monitoring.html">Folder Monitoring <span class="soon-tag">Soon</span></a></li>
-        <li><a href="drop-zone.html">Floating Drop Zone <span class="soon-tag">Soon</span></a></li>
-        <li><a href="deep-linking.html">Deep Linking <span class="soon-tag">Soon</span></a></li>
-        <li><a href="http-api.html">HTTP API <span class="soon-tag">Soon</span></a></li>
-        <li><a href="raycast.html">Raycast Extension <span class="soon-tag">Soon</span></a></li>
+        <li><a href="folder-monitoring.html">Folder Monitoring</a></li>
+        <li><a href="drop-zone.html">Floating Drop Zone</a></li>
+        <li><a href="deep-linking.html">Deep Linking</a></li>
+        <li><a href="http-api.html">HTTP API</a></li>
+        <li><a href="raycast.html">Raycast Extension</a></li>
       </ul>
     </aside>
 
@@ -63,6 +60,10 @@
       <p>There's no separate metadata toggle — Dense preserves it automatically. Full-size re-encodes carry EXIF orientation, GPS coordinates, capture date, camera info, and color profile straight through. If you cap the resolution (shrinking dimensions, not just quality), orientation metadata is intentionally not re-copied — the resize step already bakes the correct orientation into the pixels, so copying it again would double-rotate the image.</p>
 
       <div class="tip">Batch a whole folder of photos at once — each image compresses independently, so a single corrupt file won't stop the rest.</div>
+
+      <h2>Smart names for images</h2>
+      <p>An opt-in toggle in the advanced panel — off by default. When on, Dense uses on-device Vision image recognition to suggest a clearer filename for the compressed output, like <code>beach-dog-2026-07-09.jpg</code> instead of <code>IMG_4821-compressed.jpg</code>. Nothing leaves your Mac: classification runs entirely locally.</p>
+      <p>This only ever renames the compression <strong>output</strong> — your original file's name is never touched. If Dense can't confidently classify the image (or Vision has any trouble with it), the output keeps its normal suffixed filename — smart renaming never blocks or fails a job.</p>
 
       <h2>Output location, suffix, and cleanup</h2>
       <p>Same options as everywhere else in Dense: <strong>Output</strong> (<code>Next to original</code> or a chosen <code>Custom folder</code>), <strong>Suffix</strong> (default <code>-compressed</code>), and <strong>Move to Trash after success</strong> for the originals once you're happy with the result.</p>
