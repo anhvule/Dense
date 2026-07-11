@@ -1,0 +1,84 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "dense",
+  "title": "Dense",
+  "description": "Compress video, image, GIF, and PDF files with Dense straight from Finder or your clipboard.",
+  "icon": "icon.png",
+  "author": "REPLACE-AT-LAUNCH",
+  "categories": [
+    "Productivity",
+    "Media"
+  ],
+  "license": "MIT",
+  "commands": [
+    {
+      "name": "compress",
+      "title": "Compress with Dense",
+      "subtitle": "Dense",
+      "description": "Sends the files currently selected in Finder to Dense for compression.",
+      "mode": "no-view",
+      "arguments": [
+        {
+          "name": "preset",
+          "type": "dropdown",
+          "placeholder": "Preset",
+          "required": false,
+          "data": [
+            { "title": "Discord (25 MB)", "value": "discord" },
+            { "title": "Discord Nitro (500 MB)", "value": "discordNitro" },
+            { "title": "Email (25 MB)", "value": "email" },
+            { "title": "YouTube Upload", "value": "youtube" },
+            { "title": "Web / Social", "value": "webSocial" },
+            { "title": "High Quality", "value": "high" },
+            { "title": "Balanced", "value": "balanced" },
+            { "title": "Small File", "value": "small" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compress-clipboard",
+      "title": "Compress Clipboard File",
+      "subtitle": "Dense",
+      "description": "Sends the file path currently on your clipboard to Dense for compression.",
+      "mode": "no-view",
+      "arguments": [
+        {
+          "name": "preset",
+          "type": "dropdown",
+          "placeholder": "Preset",
+          "required": false,
+          "data": [
+            { "title": "Discord (25 MB)", "value": "discord" },
+            { "title": "Discord Nitro (500 MB)", "value": "discordNitro" },
+            { "title": "Email (25 MB)", "value": "email" },
+            { "title": "YouTube Upload", "value": "youtube" },
+            { "title": "Web / Social", "value": "webSocial" },
+            { "title": "High Quality", "value": "high" },
+            { "title": "Balanced", "value": "balanced" },
+            { "title": "Small File", "value": "small" }
+          ]
+        }
+      ]
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "^1.94.0",
+    "@raycast/utils": "^1.19.1"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^1.0.11",
+    "@types/node": "^20.14.9",
+    "@types/react": "^18.3.3",
+    "eslint": "^8.57.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.4.5"
+  },
+  "scripts": {
+    "build": "ray build -e dist",
+    "dev": "ray develop",
+    "fix-lint": "ray lint --fix",
+    "lint": "ray lint",
+    "typecheck": "tsc --noEmit"
+  }
+}
