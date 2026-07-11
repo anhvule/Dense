@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Raycast Extension (Coming Soon) — Dense Docs</title>
-  <meta name="description" content="A Raycast extension is planned for Dense but not yet shipped.">
+  <title>Raycast Extension — Dense Docs</title>
+  <meta name="description" content="Compress files straight from Raycast — your Finder selection or clipboard file, any preset — without switching to Dense.">
   <link rel="stylesheet" href="../../style.css">
 </head>
 <body>
@@ -33,24 +33,32 @@
         <li><a href="video-to-gif.html">Video to GIF</a></li>
         <li><a href="extract-mp3.html">Extract MP3</a></li>
         <li><a href="compress-pdf.html">Compress a PDF</a></li>
-      </ul>
-      <h4>Coming Soon</h4>
-      <ul>
-        <li><a href="folder-monitoring.html">Folder Monitoring <span class="soon-tag">Soon</span></a></li>
-        <li><a href="drop-zone.html">Floating Drop Zone <span class="soon-tag">Soon</span></a></li>
-        <li><a href="deep-linking.html">Deep Linking <span class="soon-tag">Soon</span></a></li>
-        <li><a href="http-api.html">HTTP API <span class="soon-tag">Soon</span></a></li>
-        <li><a href="raycast.html" class="active">Raycast Extension <span class="soon-tag">Soon</span></a></li>
+        <li><a href="folder-monitoring.html">Folder Monitoring</a></li>
+        <li><a href="drop-zone.html">Floating Drop Zone</a></li>
+        <li><a href="deep-linking.html">Deep Linking</a></li>
+        <li><a href="http-api.html">HTTP API</a></li>
+        <li><a href="raycast.html" class="active">Raycast Extension</a></li>
       </ul>
     </aside>
 
     <div class="docs-content">
-      <h1>Raycast Extension <span class="badge badge-soon">Coming soon</span></h1>
-      <p class="lede">Not shipped yet — this page is a placeholder for a planned feature.</p>
-      <div class="soon-note">
-        <p>The idea: compress files straight from Raycast — pick a file, pick a destination preset, done — without switching over to the Dense window.</p>
-        <p>This isn't in the current release. Check the <a href="../../changelog.html">changelog</a> for when it lands.</p>
-      </div>
+      <h1>Raycast Extension</h1>
+      <p class="lede">Compress files straight from Raycast — pick a preset, done — without switching over to the Dense window.</p>
+
+      <h2>Commands</h2>
+      <ul>
+        <li><strong>Compress with Dense</strong> — takes your current Finder selection, filters it to file types Dense supports, and sends it over.</li>
+        <li><strong>Compress Clipboard File</strong> — same idea, but for a single file path or <code>file://</code> URL currently on your clipboard.</li>
+      </ul>
+      <p>Both commands take a <strong>preset</strong> argument (Discord, Discord Nitro, Email, YouTube, Web/Social, High Quality, Balanced, or Small File — defaulting to Balanced) right in the Raycast command bar.</p>
+
+      <h2>How it works</h2>
+      <p>The extension builds a <a href="deep-linking.html"><code>dense://compress</code></a> link from your selection and opens it — Dense does the rest, exactly as if you'd dragged the files in yourself. Unsupported file types in a mixed selection are skipped with a note in the confirmation HUD rather than blocking the whole action.</p>
+
+      <div class="tip">If Dense isn't installed, Raycast shows a toast with a link to get it instead of failing silently.</div>
+
+      <h2>Installing</h2>
+      <p>Search the Raycast Store for "Dense" and install the extension, or, for local development, clone the extension from <code>integrations/raycast/</code> in the Dense repo and run <code>npx ray develop</code>.</p>
     </div>
   </div>
 

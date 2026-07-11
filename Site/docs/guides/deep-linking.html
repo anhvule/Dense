@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Deep Linking (Coming Soon) — Dense Docs</title>
-  <meta name="description" content="dense:// deep links are planned for Dense but not yet shipped.">
+  <title>Deep Linking — Dense Docs</title>
+  <meta name="description" content="Trigger Dense compression jobs from other apps, Shortcuts, or scripts with a dense:// URL.">
   <link rel="stylesheet" href="../../style.css">
 </head>
 <body>
@@ -33,24 +33,36 @@
         <li><a href="video-to-gif.html">Video to GIF</a></li>
         <li><a href="extract-mp3.html">Extract MP3</a></li>
         <li><a href="compress-pdf.html">Compress a PDF</a></li>
-      </ul>
-      <h4>Coming Soon</h4>
-      <ul>
-        <li><a href="folder-monitoring.html">Folder Monitoring <span class="soon-tag">Soon</span></a></li>
-        <li><a href="drop-zone.html">Floating Drop Zone <span class="soon-tag">Soon</span></a></li>
-        <li><a href="deep-linking.html" class="active">Deep Linking <span class="soon-tag">Soon</span></a></li>
-        <li><a href="http-api.html">HTTP API <span class="soon-tag">Soon</span></a></li>
-        <li><a href="raycast.html">Raycast Extension <span class="soon-tag">Soon</span></a></li>
+        <li><a href="folder-monitoring.html">Folder Monitoring</a></li>
+        <li><a href="drop-zone.html">Floating Drop Zone</a></li>
+        <li><a href="deep-linking.html" class="active">Deep Linking</a></li>
+        <li><a href="http-api.html">HTTP API</a></li>
+        <li><a href="raycast.html">Raycast Extension</a></li>
       </ul>
     </aside>
 
     <div class="docs-content">
-      <h1>Deep Linking <span class="badge badge-soon">Coming soon</span></h1>
-      <p class="lede">Not shipped yet — this page is a placeholder for a planned feature.</p>
-      <div class="soon-note">
-        <p>The idea: a <code>dense://</code> URL scheme so other apps, Shortcuts, or scripts can trigger a Dense compression job directly, without you opening the app and dragging a file yourself.</p>
-        <p>This isn't in the current release. Check the <a href="../../changelog.html">changelog</a> for when it lands.</p>
-      </div>
+      <h1>Deep Linking</h1>
+      <p class="lede">A <code>dense://</code> URL scheme so other apps, Shortcuts, or scripts can trigger a Dense compression job directly — no opening the app or dragging a file yourself required.</p>
+
+      <h2>The URL format</h2>
+      <p>Dense registers the <code>dense://compress</code> scheme and host. Give it one or more absolute <code>path</code> query items, plus an optional <code>preset</code>:</p>
+      <pre style="background:var(--surface); padding:12px 16px; border-radius:8px; overflow-x:auto;"><code>dense://compress?path=/Users/me/clip.mp4&amp;preset=small</code></pre>
+      <p>Multiple files in one link: repeat the <code>path</code> item.</p>
+      <pre style="background:var(--surface); padding:12px 16px; border-radius:8px; overflow-x:auto;"><code>dense://compress?path=/Users/me/a.mp4&amp;path=/Users/me/b.jpg&amp;preset=webSocial</code></pre>
+
+      <h2>Presets</h2>
+      <p>The <code>preset</code> value matches one of Dense's internal preset names: <code>discord</code>, <code>discordNitro</code>, <code>email</code>, <code>youtube</code>, <code>webSocial</code>, <code>high</code>, <code>balanced</code>, or <code>small</code>. Omit it entirely to use whatever preset is currently selected in the app.</p>
+
+      <h2>Encoding</h2>
+      <p>Paths must be percent-encoded per RFC 3986 — spaces as <code>%20</code>, never <code>+</code>. A path that doesn't decode to an absolute filesystem path, or a link with no <code>path</code> items at all, is rejected with a rejection banner rather than silently doing nothing.</p>
+
+      <div class="tip">A link's preset never changes your default preset in the app — the same rule that applies to watched folders and the local HTTP API. It's a per-invocation choice made by whoever built the link, not a manual UI action.</div>
+
+      <h2>Missing files</h2>
+      <p>A path that parses fine but doesn't exist on disk shows up as its own failed row in the queue (<code>"File not found"</code>) rather than blocking the rest of the link's files from processing.</p>
+
+      <p>This is exactly what the <a href="raycast.html">Raycast extension</a> builds on top of.</p>
     </div>
   </div>
 

@@ -1,14 +1,14 @@
 # Manual QA Checklist — Dense (destination-dock redesign)
 
 Run this pass by hand on a real Mac before every tagged release. It exists because
-the automated suite (`swift test`, currently 45/45) covers the compression engine,
+the automated suite (`swift test`, currently 164/164) covers the compression engine,
 argument-building, and state logic — it does not drive the SwiftUI surface, real
 drag-and-drop, the Finder, System Settings, or a real Lemon Squeezy store. Every
 item below is something a person must actually watch happen.
 
 Use a mix of test clips: at least one small MP4, one large (>500MB) MP4, one MOV,
-one non-video file (e.g. a `.png` and a `.pdf`), and a folder containing a couple
-of videos plus a non-video file.
+an image (`.jpg`/`.png`/`.heic`), a `.gif`, a `.pdf`, a genuinely unsupported file
+(e.g. a `.txt` or `.zip`), and a folder containing a mix of the above.
 
 Check off each box and write the actual result next to any failure.
 
@@ -39,19 +39,27 @@ Check off each box and write the actual result next to any failure.
       the queue (one level of expansion only — a video nested two folders deep
       should NOT be picked up), the non-video file inside is silently skipped,
       and no rejection banner fires for the folder itself.
-- [ ] **Non-video rejection, empty queue** — with no jobs in the queue, drop a
-      `.png` (or other non-video file). Expected: nothing is added to the queue,
-      and the orange banner "Images & PDFs coming soon — v1 is all about video."
-      appears.
-- [ ] **Non-video rejection, non-empty queue** — with at least one video already
-      queued/compressing, drop a `.png`. Expected: the existing queue is
-      undisturbed, the same rejection banner appears (it must still show even
-      though the empty-state placeholder isn't visible).
-- [ ] **Mixed drop** — drop a video and a `.png` together in one gesture.
-      Expected: the video is accepted and queued, the `.png` is silently
-      skipped, and NO rejection banner appears. (Deliberate rule: the banner
-      only appears when *nothing* in the drop was usable — if at least one
-      video was accepted, the drop counts as a success and stays silent.)
+- [ ] **Unsupported-type rejection, empty queue** — with no jobs in the queue,
+      drop a genuinely unsupported file (e.g. `.txt` or `.zip`). Expected:
+      nothing is added to the queue, and the orange banner "That file type
+      isn't supported yet." appears (the retired "Images & PDFs coming
+      soon" copy must never appear — images, GIFs, and PDFs are all
+      supported job kinds now).
+- [ ] **Unsupported-type rejection, non-empty queue** — with at least one job
+      already queued/compressing, drop an unsupported file. Expected: the
+      existing queue is undisturbed, the same rejection banner appears (it
+      must still show even though the empty-state placeholder isn't visible).
+- [ ] **Mixed drop** — drop a video and an unsupported file together in one
+      gesture. Expected: the video is accepted and queued, the unsupported
+      file is silently skipped, and NO rejection banner appears. (Deliberate
+      rule: the banner only appears when *nothing* in the drop was usable —
+      if at least one file was accepted, the drop counts as a success and
+      stays silent.)
+- [ ] **Image/GIF/PDF drops are NOT rejected** — drop a `.jpg`, a `.gif`, and
+      a `.pdf` (separately or together). Expected: each is accepted into the
+      queue and routed to its own job kind (image compression, GIF
+      optimization, PDF compression) — none of them trigger the unsupported-
+      type rejection banner.
 
 ## 2. Destination dock
 
@@ -253,6 +261,145 @@ confirm each one is exactly as left:
       picked up and compressed once its copy completes.
 - [ ] **Missing folder** — delete a watched folder on disk, reopen the panel:
       row shows a warning icon, watching is skipped, no crash.
+
+## 12. Floating drop zone & completion confetti (F7)
+
+- [ ] **Show/hide the drop zone** — click the drop-zone header icon. Expected:
+      a small circular always-on-top panel appears near the top-right of the
+      screen the first time (and wherever it was last dragged, on subsequent
+      toggles); clicking again hides it.
+- [ ] **Drop zone stays on top of other apps** — with the panel visible,
+      switch to a different app (including a full-screen one on another
+      Space) and confirm the circle is still visible and still accepts a
+      drop.
+- [ ] **Dropping onto the zone queues a real job** — drag a file onto the
+      circle. Expected: it's added to the queue using the currently selected
+      dock preset, identical to a background drop onto the main window.
+- [ ] **Position persists** — drag the panel to a new spot, quit and relaunch
+      Dense, re-show the drop zone. Expected: it reappears at the dragged
+      position, not the default corner.
+- [ ] **Closing the main window doesn't close the drop zone** — with the
+      panel visible, close Dense's main window. Expected: the floating panel
+      stays visible and still accepts drops.
+- [ ] **Confetti fires on a successful batch** — queue one or more files and
+      let them finish successfully. Expected: once the whole batch goes
+      idle, a confetti burst plays (only when at least one job in that batch
+      succeeded — a batch that only failed/skipped must NOT trigger it).
+- [ ] **Confetti respects Reduce Motion** — enable "Reduce motion" in System
+      Settings → Accessibility → Display, then repeat a successful batch.
+      Expected: no confetti burst fires.
+- [ ] **Confetti doesn't double-fire mid-batch** — queue several files that
+      finish at different times within the same batch. Expected: exactly one
+      burst when the whole batch goes idle, not one per completed file.
+
+## 13. Local HTTP API (F9)
+
+- [ ] **Off by default** — on a fresh install, confirm the Advanced panel's
+      "Local API" toggle is off and `curl http://127.0.0.1:4499/v1/jobs`
+      fails to connect.
+- [ ] **Enabling starts the listener** — flip the toggle on. Expected: a port
+      field (default 4499) and a bearer token appear; the token also gets
+      written to `~/Library/Application Support/Dense/api-token` with
+      `0600` permissions (`ls -l` to confirm) readable only by the current
+      user.
+- [ ] **Loopback only** — confirm (e.g. via `lsof -i -P | grep Dense` or
+      attempting a connection from another machine on the LAN using the
+      Mac's LAN IP) that the listener is bound to `127.0.0.1` only, never
+      reachable from another host.
+- [ ] **Auth required** — `curl -s -o /dev/null -w '%{http_code}'` a request
+      to `/v1/compress` or `/v1/jobs` with no `Authorization` header, and
+      again with a wrong token. Expected: `401` both times, and an unknown
+      route with a wrong token is still `401` (never a `404` that would leak
+      route existence to an unauthenticated caller).
+- [ ] **POST /v1/compress end-to-end** — with the real token, POST a JSON
+      body with a valid absolute path and a preset. Expected: `202`, the
+      file appears in the app's queue and actually compresses; the response
+      JSON's `accepted` count matches.
+- [ ] **Skipped paths reported, not silently dropped** — include a
+      nonexistent path and a directory path in the same request. Expected:
+      both show up in the response's `skipped` array, the valid path(s)
+      still get accepted.
+- [ ] **Path traversal rejected** — POST a path containing a `..` component.
+      Expected: `400 Bad Request`, nothing enqueued.
+- [ ] **GET /v1/jobs reflects real state** — after queueing a mix of jobs,
+      GET this endpoint and confirm the JSON list's statuses (`queued`,
+      `running`, `done`, `failed: …`) match what the app UI shows.
+- [ ] **Token rotates on restart** — toggle the API off then on again (or
+      quit/relaunch with it enabled). Expected: the displayed token changes,
+      and the *old* token is rejected (401) on a subsequent request.
+- [ ] **Token file lifecycle** — quit the app (or toggle the API off) while
+      it's enabled. Expected: the `api-token` file at
+      `~/Library/Application Support/Dense/api-token` is removed; it must
+      not linger for a process that isn't actually listening.
+- [ ] **API-triggered compress never changes the default preset** — note the
+      currently selected dock preset, fire an API compress with a different
+      preset, then do a manual drop with no dock card selected. Expected:
+      the manual drop still uses the *original* default preset, not the
+      one the API call used.
+
+## 14. Raycast extension (F10)
+
+Manual flow — the extension itself has no `swift test` coverage (it's a
+separate TypeScript project in `integrations/raycast/`); this section is the
+substitute end-to-end check.
+
+- [ ] **Install and build** — `cd integrations/raycast && npm install && npx
+      ray build -e dist` succeeds with no errors (or run via `npx ray
+      develop` for a live dev session in Raycast).
+- [ ] **"Compress with Dense" with a Finder selection** — select one or more
+      supported files in Finder, run the command from Raycast, pick a
+      preset. Expected: Dense launches (or comes forward) and the selected
+      files appear in the queue using the chosen preset.
+- [ ] **"Compress with Dense" with no Finder selection** — run the command
+      with nothing selected in Finder. Expected: a "No Finder Selection"
+      toast, nothing sent to Dense.
+- [ ] **Mixed selection with unsupported files** — select a mix of supported
+      and unsupported files, run the command. Expected: supported files are
+      sent and queued in Dense; the HUD/toast notes how many were skipped as
+      unsupported rather than failing the whole action.
+- [ ] **"Compress Clipboard File"** — copy a single supported file (or its
+      path/`file://` URL) to the clipboard, run the command with a preset.
+      Expected: that one file is sent to Dense and queued.
+- [ ] **Dense not installed / not found** — (if feasible to simulate, e.g. on
+      a clean VM) running either command should show a "Dense Isn't
+      Installed" toast with a link, not a silent failure or a crash.
+
+## 15. Smart rename & Sparkle placeholder guard (F11)
+
+- [ ] **Off by default** — on a fresh install, confirm "Smart names for
+      images" in the Advanced panel is off, and the caption "Uses on-device
+      image recognition — nothing leaves your Mac." is visible under it.
+- [ ] **Enabled: output gets renamed** — turn the toggle on, compress a
+      recognizable photo (e.g. a beach, a dog, a car). Expected: the output
+      file's name changes to a `<label>-<label>-yyyy-MM-dd.<ext>` pattern
+      (confirm in Finder or via the file row's filename label and "reveal in
+      Finder" button — both must point at the renamed file, not the old
+      name).
+- [ ] **Original is never touched** — after the above, confirm the *input*
+      file's name and location are completely unchanged.
+- [ ] **Low-confidence / unclassifiable image** — compress a blank/abstract
+      image Vision can't confidently label. Expected: the output keeps its
+      normal `-compressed`-suffixed name; no error, no banner, job still
+      shows as done.
+- [ ] **Collision handling** — compress two different images that would
+      classify to the same label pair on the same day, into the same folder.
+      Expected: the second one lands as `<stem>-2.<ext>` rather than
+      overwriting the first.
+- [ ] **Toggle only affects `.image` jobs** — with smart rename on, compress
+      a video and a PDF. Expected: neither output is renamed (the feature
+      only applies to image compression outputs).
+- [ ] **Sparkle placeholder-feed hang regression** — with the shipped/dev
+      build's `Info.plist` `SUFeedURL` still containing the
+      `REPLACE-AT-LAUNCH` placeholder (the normal state until the real feed
+      is set at launch), launch the app and confirm it does **not** hang or
+      show a blocking "Unable to Check For Updates" alert — the window
+      appears normally and the app stays fully interactive. This is the
+      exact bug that blocked F6/F8/F9 verification; regressing it silently
+      would reintroduce that failure mode for every future task.
+- [ ] **"Check for Updates…" is a safe no-op on a placeholder build** — with
+      the placeholder feed still in place, select Check for Updates… from
+      the menu (it should appear disabled). Confirm nothing crashes or hangs
+      even if triggered.
 
 ---
 

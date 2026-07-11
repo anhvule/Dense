@@ -99,6 +99,16 @@ struct AdvancedPanelView: View {
                 }.labelsHidden().frame(width: 150)
             }
             GridRow {
+                label("Smart names", systemImage: "sparkles")
+                Toggle("Smart names for images", isOn: $env.smartRenameEnabled)
+                    .toggleStyle(.checkbox).gridCellColumns(3)
+            }
+            GridRow {
+                Color.clear.frame(width: 84, height: 1)
+                Text("Uses on-device image recognition — nothing leaves your Mac.")
+                    .font(.caption2).foregroundStyle(.secondary).gridCellColumns(3)
+            }
+            GridRow {
                 label("Local API", systemImage: "network")
                 Toggle("Enable", isOn: Binding(
                     get: { env.apiEnabled },

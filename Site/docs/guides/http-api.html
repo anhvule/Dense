@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>HTTP API (Coming Soon) — Dense Docs</title>
-  <meta name="description" content="A local HTTP API is planned for Dense but not yet shipped.">
+  <title>Local HTTP API — Dense Docs</title>
+  <meta name="description" content="A loopback-only, token-authenticated HTTP API for scripting Dense from your own Mac.">
   <link rel="stylesheet" href="../../style.css">
 </head>
 <body>
@@ -33,24 +33,38 @@
         <li><a href="video-to-gif.html">Video to GIF</a></li>
         <li><a href="extract-mp3.html">Extract MP3</a></li>
         <li><a href="compress-pdf.html">Compress a PDF</a></li>
-      </ul>
-      <h4>Coming Soon</h4>
-      <ul>
-        <li><a href="folder-monitoring.html">Folder Monitoring <span class="soon-tag">Soon</span></a></li>
-        <li><a href="drop-zone.html">Floating Drop Zone <span class="soon-tag">Soon</span></a></li>
-        <li><a href="deep-linking.html">Deep Linking <span class="soon-tag">Soon</span></a></li>
-        <li><a href="http-api.html" class="active">HTTP API <span class="soon-tag">Soon</span></a></li>
-        <li><a href="raycast.html">Raycast Extension <span class="soon-tag">Soon</span></a></li>
+        <li><a href="folder-monitoring.html">Folder Monitoring</a></li>
+        <li><a href="drop-zone.html">Floating Drop Zone</a></li>
+        <li><a href="deep-linking.html">Deep Linking</a></li>
+        <li><a href="http-api.html" class="active">HTTP API</a></li>
+        <li><a href="raycast.html">Raycast Extension</a></li>
       </ul>
     </aside>
 
     <div class="docs-content">
-      <h1>Local HTTP API <span class="badge badge-soon">Coming soon</span></h1>
-      <p class="lede">Not shipped yet — this page is a placeholder for a planned feature.</p>
-      <div class="soon-note">
-        <p>The idea: a local HTTP API, bound to loopback only and gated behind a token, so scripts and other tools on your own Mac can queue compression jobs without a GUI. Still 100% on-device — no exposure beyond your machine.</p>
-        <p>This isn't in the current release. Check the <a href="../../changelog.html">changelog</a> for when it lands.</p>
-      </div>
+      <h1>Local HTTP API</h1>
+      <p class="lede">A local HTTP API, bound to loopback only and gated behind a token, so scripts and other tools on your own Mac can queue compression jobs without opening the GUI.</p>
+
+      <h2>Turning it on</h2>
+      <p>In the advanced panel, flip <strong>Local API → Enable</strong>. It's off by default. Once enabled you'll see the port (default <code>4499</code>, editable) and a bearer token, plus a ready-to-copy <code>curl</code> example.</p>
+
+      <div class="tip">The listener binds to <code>127.0.0.1</code> only — never a wildcard address — so it's unreachable from any other machine on your network, even before the OS firewall gets a say. It also only runs while explicitly enabled here.</div>
+
+      <h2>Authentication</h2>
+      <p>Every request needs an <code>Authorization: Bearer &lt;token&gt;</code> header. The token rotates every time the server (re)starts, including every app launch, and is never written to your Mac's preferences — it lives in memory and in a mode-<code>0600</code> file at <code>~/Library/Application Support/Dense/api-token</code> (readable only by you) for as long as the server is running, so scripts can read it without touching the UI.</p>
+
+      <h2>Endpoints</h2>
+      <p><code>POST /v1/compress</code> — queues files for compression:</p>
+      <pre style="background:var(--surface); padding:12px 16px; border-radius:8px; overflow-x:auto;"><code>curl -s http://127.0.0.1:4499/v1/compress \
+  -H "Authorization: Bearer &lt;token&gt;" \
+  -H "Content-Type: application/json" \
+  -d '{"paths":["/Users/me/clip.mp4"],"preset":"small"}'</code></pre>
+      <p><code>paths</code> must be absolute (a bare path or a <code>file://</code> URL) and contain no <code>..</code> components — traversal attempts are rejected outright, not silently resolved. <code>preset</code> is optional and matches the same preset names as <a href="deep-linking.html">deep links</a>. The response reports how many files were accepted and which were skipped (missing, a directory, or an unsupported type).</p>
+
+      <p><code>GET /v1/jobs</code> — returns the current job queue as JSON, including each job's status and, once done, its size savings.</p>
+
+      <h2>Limits</h2>
+      <p>Request bodies are capped at 1 MB (this is a control-plane protocol — paths and a preset name — not a bulk upload endpoint), at most 16 simultaneous connections are accepted, and an idle connection is dropped after 10 seconds. An API-triggered compress never changes your default preset in the app, same as a watched folder or a deep link.</p>
     </div>
   </div>
 

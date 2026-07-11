@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Folder Monitoring (Coming Soon) — Dense Docs</title>
-  <meta name="description" content="Folder monitoring is planned for Dense but not yet shipped.">
+  <title>Folder Monitoring — Dense Docs</title>
+  <meta name="description" content="Point Dense at a folder and anything new dropped in it compresses automatically with that folder's own preset.">
   <link rel="stylesheet" href="../../style.css">
 </head>
 <body>
@@ -33,24 +33,33 @@
         <li><a href="video-to-gif.html">Video to GIF</a></li>
         <li><a href="extract-mp3.html">Extract MP3</a></li>
         <li><a href="compress-pdf.html">Compress a PDF</a></li>
-      </ul>
-      <h4>Coming Soon</h4>
-      <ul>
-        <li><a href="folder-monitoring.html" class="active">Folder Monitoring <span class="soon-tag">Soon</span></a></li>
-        <li><a href="drop-zone.html">Floating Drop Zone <span class="soon-tag">Soon</span></a></li>
-        <li><a href="deep-linking.html">Deep Linking <span class="soon-tag">Soon</span></a></li>
-        <li><a href="http-api.html">HTTP API <span class="soon-tag">Soon</span></a></li>
-        <li><a href="raycast.html">Raycast Extension <span class="soon-tag">Soon</span></a></li>
+        <li><a href="folder-monitoring.html" class="active">Folder Monitoring</a></li>
+        <li><a href="drop-zone.html">Floating Drop Zone</a></li>
+        <li><a href="deep-linking.html">Deep Linking</a></li>
+        <li><a href="http-api.html">HTTP API</a></li>
+        <li><a href="raycast.html">Raycast Extension</a></li>
       </ul>
     </aside>
 
     <div class="docs-content">
-      <h1>Folder Monitoring <span class="badge badge-soon">Coming soon</span></h1>
-      <p class="lede">Not shipped yet — this page is a placeholder for a planned feature.</p>
-      <div class="soon-note">
-        <p>The idea: point Dense at a folder, and anything new that shows up inside it gets compressed automatically, using whatever preset you assign to that folder. No dragging required after the initial setup.</p>
-        <p>This isn't in the current release. Check the <a href="../../changelog.html">changelog</a> for when it lands.</p>
-      </div>
+      <h1>Folder Monitoring</h1>
+      <p class="lede">Point Dense at a folder, and anything new that shows up inside it compresses automatically — no dragging required after the initial setup.</p>
+
+      <h2>Adding a watched folder</h2>
+      <p>Open the advanced panel and find <strong>Watched folders</strong>, then click <strong>Add folder…</strong> to pick a directory. Each watched folder gets its own row with a preset picker and an on/off switch.</p>
+
+      <h2>Per-folder presets</h2>
+      <p>Every watched folder remembers its own preset (Discord, Email, YouTube, Web/Social, or any of the others) independently of whatever preset is currently selected on the destination dock. Dropping a file onto the dock manually is unaffected by a folder's watch preset, and vice versa.</p>
+
+      <div class="tip">Files already sitting in a folder when you start watching it are left alone — only files that arrive <em>after</em> watching begins get auto-compressed. This is deliberate: it avoids surprise mass-compression of an existing backlog the moment you turn watching on.</div>
+
+      <h2>How arrivals are detected</h2>
+      <p>Dense waits for a new file to sit still (no size changes) for about a second before enqueuing it, so a slow copy or download doesn't get grabbed half-written. Outputs the watcher itself creates are recognized and skipped, so it never re-compresses its own results in a loop.</p>
+
+      <h2>Pausing, editing, and removing</h2>
+      <p>Toggle a folder's switch off to pause watching without losing its configuration, change its preset at any time, or remove it entirely with the trash icon. If a watched folder is deleted on disk, its row shows a warning triangle and watching for it is skipped until the folder exists again.</p>
+
+      <p>Watched folders, their presets, and enabled state all persist across a relaunch.</p>
     </div>
   </div>
 
