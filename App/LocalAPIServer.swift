@@ -1,5 +1,6 @@
 // App/LocalAPIServer.swift
 import Foundation
+import AppKit
 import Network
 import DenseCore
 
@@ -30,6 +31,38 @@ final class LocalAPIServer {
 
     private var listener: NWListener?
     private var connections: [ObjectIdentifier: NWConnection] = [:]
+    /// One idle-deadline task per open connection, reset every time data
+    /// arrives; firing cancels the connection. Keyed identically to
+    /// `connections` and always mutated in lockstep with it.
+    private var idleTimers: [ObjectIdentifier: Task<Void, Never>] = [:]
+
+    /// Simultaneous-connection cap: connections accepted beyond this are
+    /// cancelled immediately. The API's whole traffic model is one short
+    /// request per connection from a local script, so 16 is generous —
+    /// the cap exists to bound what a misbehaving local process can make
+    /// the app hold open, not to serve real concurrency.
+    private static let maxConnections = 16
+    /// A connection that has gone this long without delivering any new
+    /// bytes is cancelled — bounds half-open/stalled connections (e.g. a
+    /// client that sent half a request and hung) instead of holding the
+    /// buffer forever.
+    private static let idleTimeoutSeconds: UInt64 = 10
+
+    /// The token file must not outlive the process: `stop()` (which removes
+    /// it) is only called on explicit disable/restart, so app quit needs its
+    /// own hook. Observing `NSApplication.willTerminateNotification` here —
+    /// rather than relying on a caller remembering to stop the server —
+    /// keeps the cleanup with the resource's owner. Synchronous
+    /// `assumeIsolated` (the notification is posted on the main thread, and
+    /// this observer is registered with `queue: .main`) because a Task hop
+    /// scheduled during termination may never get to run.
+    init() {
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.willTerminateNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.stop() }
+        }
+    }
 
     private static let tokenFileDirectory: URL? = {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
@@ -79,6 +112,8 @@ final class LocalAPIServer {
         listener = nil
         for (_, connection) in connections { connection.cancel() }
         connections.removeAll()
+        for (_, timer) in idleTimers { timer.cancel() }
+        idleTimers.removeAll()
         isRunning = false
         removeTokenFile()
     }
@@ -86,18 +121,40 @@ final class LocalAPIServer {
     // MARK: - Connection handling
 
     private func accept(_ connection: NWConnection) {
+        guard connections.count < Self.maxConnections else {
+            connection.cancel()
+            return
+        }
         let id = ObjectIdentifier(connection)
         connections[id] = connection
         connection.stateUpdateHandler = { [weak self] state in
             switch state {
             case .failed, .cancelled:
-                Task { @MainActor in self?.connections[id] = nil }
+                Task { @MainActor in
+                    self?.connections[id] = nil
+                    self?.idleTimers[id]?.cancel()
+                    self?.idleTimers[id] = nil
+                }
             default:
                 break
             }
         }
         connection.start(queue: .main)
+        resetIdleTimer(for: connection)
         receive(on: connection, buffer: Data())
+    }
+
+    /// (Re)arms the connection's idle deadline. `Task {}` inherits this
+    /// class's `@MainActor` context, so the timer body runs on the main
+    /// actor like everything else here.
+    private func resetIdleTimer(for connection: NWConnection) {
+        let id = ObjectIdentifier(connection)
+        idleTimers[id]?.cancel()
+        idleTimers[id] = Task {
+            try? await Task.sleep(nanoseconds: Self.idleTimeoutSeconds * 1_000_000_000)
+            guard !Task.isCancelled else { return }
+            connection.cancel() // state handler above removes it from both dictionaries
+        }
     }
 
     private func receive(on connection: NWConnection, buffer: Data) {
@@ -105,7 +162,10 @@ final class LocalAPIServer {
             Task { @MainActor in
                 guard let self else { return }
                 var buffer = buffer
-                if let data, !data.isEmpty { buffer.append(data) }
+                if let data, !data.isEmpty {
+                    buffer.append(data)
+                    self.resetIdleTimer(for: connection)
+                }
 
                 do {
                     if let request = try LocalAPI.parseRequest(buffer: buffer) {

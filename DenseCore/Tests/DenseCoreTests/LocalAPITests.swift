@@ -216,6 +216,20 @@ final class LocalAPITests: XCTestCase {
         XCTAssertEqual(call.paths, ["/a/b.mp4"])
     }
 
+    // MARK: - constantTimeEquals
+
+    func testConstantTimeEqualsEqualStrings() {
+        XCTAssertTrue(LocalAPI.constantTimeEquals(token, token))
+        XCTAssertTrue(LocalAPI.constantTimeEquals("", ""))
+    }
+
+    func testConstantTimeEqualsUnequalStrings() {
+        XCTAssertFalse(LocalAPI.constantTimeEquals(token, "deadbeefdeadbeefdeadbeefdeadbeeF")) // last char differs
+        XCTAssertFalse(LocalAPI.constantTimeEquals("Xeadbeefdeadbeefdeadbeefdeadbeef", token)) // first char differs
+        XCTAssertFalse(LocalAPI.constantTimeEquals(token, "short")) // different lengths
+        XCTAssertFalse(LocalAPI.constantTimeEquals("", token))
+    }
+
     // MARK: - response
 
     func testResponseBuildsFullHTTPBytes() throws {

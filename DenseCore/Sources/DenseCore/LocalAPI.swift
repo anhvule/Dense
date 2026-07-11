@@ -134,7 +134,7 @@ public enum LocalAPI {
         let schemeAndToken = authHeader.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
         guard schemeAndToken.count == 2,
               schemeAndToken[0].caseInsensitiveCompare("bearer") == .orderedSame,
-              schemeAndToken[1] == token else {
+              constantTimeEquals(String(schemeAndToken[1]), token) else {
             return .unauthorized
         }
 
@@ -151,6 +151,23 @@ public enum LocalAPI {
         default:
             return .notFound
         }
+    }
+
+    /// Constant-time equality over the UTF-8 bytes of both strings: XORs
+    /// every byte pair into a bitwise-OR accumulator so the comparison
+    /// touches all bytes regardless of where the first mismatch is. The
+    /// length check short-circuits, which is fine — token length is public
+    /// knowledge (32 hex chars), only its content is secret. Loopback +
+    /// per-launch rotation already make a timing oracle largely academic
+    /// here; this closes it anyway since the cost is a few lines.
+    /// Internal (not private) for direct unit testing.
+    static func constantTimeEquals(_ a: String, _ b: String) -> Bool {
+        let aBytes = Array(a.utf8)
+        let bBytes = Array(b.utf8)
+        guard aBytes.count == bBytes.count else { return false }
+        var acc: UInt8 = 0
+        for i in 0..<aBytes.count { acc |= aBytes[i] ^ bBytes[i] }
+        return acc == 0
     }
 
     private struct CompressPayload: Decodable {
