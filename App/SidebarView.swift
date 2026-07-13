@@ -11,8 +11,7 @@ struct SidebarView: View {
             get: { Optional(env.destinationID) },
             set: { id in
                 guard let id else { return }
-                env.destinationID = id
-                env.defaultPreset = Destination.byID(id).preset
+                env.selectDestination(id)
             })) {
             Section("Destinations") {
                 ForEach(Destination.all) { dest in
@@ -29,10 +28,8 @@ struct SidebarView: View {
                     .onDrop(of: [UTType.fileURL], isTargeted: nil) { providers in
                         Task {
                             let urls = await loadDroppedURLs(from: providers)
-                            env.destinationID = dest.id
-                            let accepted = env.handleDrop(urls: urls, preset: dest.preset)
-                            env.rejectionBanner = (accepted == 0 && !urls.isEmpty)
-                                ? "That file type isn't supported yet." : nil
+                            env.selectDestination(dest.id)
+                            env.handleGUIDrop(urls: urls, preset: dest.preset)
                         }
                         return true
                     }

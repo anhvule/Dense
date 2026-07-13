@@ -41,9 +41,7 @@ struct QueuePaneView: View {
         .onDrop(of: [UTType.fileURL], isTargeted: nil) { providers in
             Task {
                 let urls = await loadDroppedURLs(from: providers)
-                let accepted = env.handleDrop(urls: urls)
-                env.rejectionBanner = (accepted == 0 && !urls.isEmpty)
-                    ? "That file type isn't supported yet." : nil
+                env.handleGUIDrop(urls: urls)
             }
             return true
         }

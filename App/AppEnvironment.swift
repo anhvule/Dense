@@ -215,6 +215,17 @@ final class AppEnvironment: ObservableObject {
         customOutputPath = path
     }
 
+    /// Central setter for the active destination. `@AppStorage` on a plain
+    /// ObservableObject doesn't emit `objectWillChange` (same caveat as the
+    /// other setters here), so views reading `destination`/`defaultPreset`
+    /// (the queue pane's title, subtitle, and empty state) won't refresh
+    /// unless we publish manually.
+    func selectDestination(_ id: String) {
+        objectWillChange.send()
+        destinationID = id
+        defaultPreset = Destination.byID(id).preset
+    }
+
     init() {
         guard let ffmpeg = FFmpegRunner.locateTool(named: "ffmpeg"),
               let ffprobe = FFmpegRunner.locateTool(named: "ffprobe") else {
@@ -350,6 +361,21 @@ final class AppEnvironment: ObservableObject {
     }
 
     func handleDrop(urls: [URL]) -> Int { handleDrop(urls: urls, preset: nil) }
+
+    /// GUI drop entry point. Runs `handleDrop` and owns the rejection banner:
+    /// a disk-space rejection (set by `handleDrop` itself) survives, an
+    /// all-unsupported drop shows the type message, and an accepted drop clears
+    /// any stale banner. The raw `handleDrop` stays in use by the folder
+    /// watcher and deep-link paths, which manage their own messaging.
+    @discardableResult
+    func handleGUIDrop(urls: [URL], preset: Preset? = nil) -> Int {
+        rejectionBanner = nil                       // clear stale; handleDrop sets the disk warning if needed
+        let accepted = handleDrop(urls: urls, preset: preset)
+        if rejectionBanner == nil, accepted == 0, !urls.isEmpty {
+            rejectionBanner = "That file type isn't supported yet."
+        }
+        return accepted
+    }
 
     // MARK: - Deep linking (dense://compress)
 
