@@ -41,6 +41,9 @@ final class AppEnvironment: ObservableObject {
     /// `SmartRename`). Never touches originals.
     @AppStorage("smartRenameEnabled") var smartRenameEnabled: Bool = false
     @AppStorage("pdfQualityRaw") var pdfQualityRaw: String = PDFQuality.balanced.rawValue
+    @AppStorage("destinationID") var destinationID: String = "email25"
+    @Published var selectedJobID: UUID?
+    @Published var inspectorPresented: Bool = false
     @AppStorage("didMigrateHEVCToContainer") private var didMigrateHEVCToContainer: Bool = false
     /// 0 = Off; otherwise the fps cap passed straight to `CompressionOptions.fpsCap`.
     @AppStorage("fpsCapRaw") var fpsCapRaw: Int = 0
@@ -80,6 +83,8 @@ final class AppEnvironment: ObservableObject {
         get { Preset(rawValue: defaultPresetRaw) ?? .balanced }
         set { defaultPresetRaw = newValue.rawValue }
     }
+
+    var destination: Destination { Destination.byID(destinationID) }
 
     var options: CompressionOptions {
         var opts = CompressionOptions(preset: defaultPreset)
@@ -308,8 +313,13 @@ final class AppEnvironment: ObservableObject {
                       outputDir: outputDir, gifOptions: gifOptions, trashOriginalOnSuccess: trashOriginals)
         }
         if !pdfs.isEmpty {
-            queue.add(urls: pdfs, kind: .pdf, options: effective,
-                      outputDir: outputDir, pdfQuality: pdfQuality, trashOriginalOnSuccess: trashOriginals)
+            // PDFs share the destination's byte budget (effectiveTargetMB covers
+            // both the preset target and a custom-MB override); quality-first
+            // destinations fall back to the fixed-quality rung.
+            let quality = Destination.all.first { $0.preset == effective.preset }?.pdfQuality ?? pdfQuality
+            queue.add(urls: pdfs, kind: .pdf, options: effective, outputDir: outputDir,
+                      pdfQuality: quality, pdfTargetMB: effective.effectiveTargetMB,
+                      trashOriginalOnSuccess: trashOriginals)
         }
         return videos.count + images.count + gifs.count + pdfs.count
     }
