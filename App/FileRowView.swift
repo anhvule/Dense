@@ -5,6 +5,7 @@ import DenseCore
 struct FileRowView: View {
     @EnvironmentObject var env: AppEnvironment
     @ObservedObject var job: Job
+    var isSelected: Bool = false
     @State private var thumb: NSImage?
     @State private var inputSizeText: String = ""
 
@@ -13,12 +14,15 @@ struct FileRowView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .quaternaryLabelColor))
                 if let thumb { Image(nsImage: thumb).resizable().aspectRatio(contentMode: .fill) }
-                else { Image(systemName: "film").foregroundStyle(.secondary) }
+                else {
+                    Image(systemName: FileKind.of(job.input) == .pdf ? "doc.richtext" : "film")
+                        .foregroundStyle(.secondary)
+                }
             }
             .frame(width: 56, height: 38)
             .clipShape(RoundedRectangle(cornerRadius: 6))
             .overlay(alignment: .bottomLeading) {
-                if thumb != nil {
+                if thumb != nil && FileKind.of(job.input) == .video {
                     Image(systemName: "play.fill")
                         .font(.system(size: 8))
                         .foregroundStyle(.white)
@@ -40,6 +44,8 @@ struct FileRowView: View {
         }
         .padding(10)
         .glassCard(radius: Theme.rowRadius)
+        .overlay(RoundedRectangle(cornerRadius: Theme.rowRadius)
+            .strokeBorder(isSelected ? Theme.accent : .clear, lineWidth: 2))
         .transition(.move(edge: .top).combined(with: .opacity))
         .contextMenu {
             // Per-file action, not a batch mode — deliberately no advanced-panel
