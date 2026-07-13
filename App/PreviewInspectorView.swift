@@ -11,11 +11,14 @@ final class PreviewModel: ObservableObject {
     @Published var pdfQuality: PDFQuality = .balanced
     @Published var inputBytes: Int64 = 0
     private var seededForJob: UUID?
+    private var generation = 0
 
     func reload(job: Job, env: AppEnvironment) async {
+        generation += 1
+        let token = generation
         loading = true
         errorMessage = nil
-        defer { loading = false }
+        defer { if token == generation { loading = false } }
         inputBytes = ((try? FileManager.default
             .attributesOfItem(atPath: job.input.path))?[.size] as? Int64) ?? 0
         if seededForJob != job.id {
@@ -30,14 +33,20 @@ final class PreviewModel: ObservableObject {
             case .video:
                 var opts = env.options
                 opts.customTargetMB = videoTargetMB
-                pair = try await env.previewRenderer.videoPreview(input: job.input, options: opts)
+                let result = try await env.previewRenderer.videoPreview(input: job.input, options: opts)
+                guard token == generation else { return }
+                pair = result
             case .pdf:
-                pair = try env.previewRenderer.pdfPreview(input: job.input, quality: pdfQuality)
+                let result = try env.previewRenderer.pdfPreview(input: job.input, quality: pdfQuality)
+                guard token == generation else { return }
+                pair = result
             default:
+                guard token == generation else { return }
                 pair = nil
                 errorMessage = "Preview isn't available for this file type."
             }
         } catch {
+            guard token == generation else { return }
             pair = nil
             errorMessage = JobQueue.message(for: error)
         }
