@@ -6,6 +6,12 @@ import DenseCore
 @MainActor
 final class AppEnvironment: ObservableObject {
     let queue: JobQueue
+    /// Same ffmpeg/ffprobe locations the queue's compressors were built
+    /// from — stored here so the preview inspector can build a
+    /// `PreviewRenderer` without re-walking `locateTool` a second time.
+    let ffmpegURL: URL
+    let ffprobeURL: URL
+    lazy var previewRenderer = PreviewRenderer(ffmpegURL: ffmpegURL, ffprobeURL: ffprobeURL)
     let licenseState = LicenseState(store: KeychainStore())
     @Published var licenseStatus: LicenseStatus = .licensed
     @AppStorage("dropZoneEnabled") private(set) var dropZoneEnabled: Bool = false
@@ -208,6 +214,8 @@ final class AppEnvironment: ObservableObject {
               let ffprobe = FFmpegRunner.locateTool(named: "ffprobe") else {
             fatalError("bundled ffmpeg missing — check project.yml resources")
         }
+        ffmpegURL = ffmpeg
+        ffprobeURL = ffprobe
         queue = JobQueue(compressor: VideoCompressor(ffmpegURL: ffmpeg, ffprobeURL: ffprobe),
                          gifConverter: GIFConverter(ffmpegURL: ffmpeg, ffprobeURL: ffprobe),
                          imageCompressor: ImageCompressor(ffmpegURL: ffmpeg),

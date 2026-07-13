@@ -11,6 +11,10 @@ struct MainView: View {
         } detail: {
             QueuePaneView(queue: queue)
         }
+        .inspector(isPresented: $env.inspectorPresented) {
+            PreviewInspectorView()
+                .inspectorColumnWidth(min: 300, ideal: 360, max: 480)
+        }
         .background(GlassBackground().ignoresSafeArea())
         .frame(minWidth: 760, minHeight: 480)
         .overlay(ConfettiView(trigger: env.confettiTrigger).allowsHitTesting(false))
