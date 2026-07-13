@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import Combine
+import UserNotifications
 import DenseCore
 
 @MainActor
@@ -84,6 +85,11 @@ final class AppEnvironment: ObservableObject {
     /// starts (new adds arriving while the queue was idle) and whenever a
     /// burst fires.
     private var batchHadSuccess = false
+    /// Sleep/App Nap assertion held while the queue has any queued/running
+    /// job — released the moment the batch goes idle. `beginActivity` only
+    /// fires when this is `nil` (guards against double-assert); `endActivity`
+    /// only fires when it isn't (guards against double-release).
+    private var processActivity: NSObjectProtocol?
 
     var defaultPreset: Preset {
         get { Preset(rawValue: defaultPresetRaw) ?? .balanced }
@@ -303,6 +309,17 @@ final class AppEnvironment: ObservableObject {
                 classify(url)
             }
         }
+        // Disk preflight: refuse the whole batch up front rather than let it
+        // fail job-by-job partway through and leave half-written outputs.
+        let batchBytes = (videos + images + gifs + pdfs).reduce(Int64(0)) { sum, url in
+            sum + (((try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int64) ?? 0)
+        }
+        let volume = outputDir ?? FileManager.default.homeDirectoryForCurrentUser
+        if let free = DiskSpace.freeBytes(at: volume),
+           let warning = DiskSpace.warning(estimatedBytes: batchBytes, freeBytes: free) {
+            rejectionBanner = warning
+            return 0
+        }
         var effective = options
         if let preset {
             effective.preset = preset
@@ -483,6 +500,14 @@ final class AppEnvironment: ObservableObject {
             default: return false
             }
         }
+        // Hold a sleep/App Nap assertion for as long as any job is queued or
+        // running — begins the moment the queue goes active, guarded so a
+        // still-active queue never re-asserts (and leaks a second token).
+        if activeNow, processActivity == nil {
+            processActivity = ProcessInfo.processInfo.beginActivity(
+                options: [.userInitiated, .idleSystemSleepDisabled],
+                reason: "Compressing files")
+        }
         if activeNow && !queueWasActive {
             // A fresh batch just became active (new files dropped while the
             // queue was idle) — forget whatever the previous, already
@@ -491,14 +516,41 @@ final class AppEnvironment: ObservableObject {
         }
         if !activeNow && queueWasActive && !jobs.isEmpty && batchHadSuccess {
             fireConfettiIfMotionAllowed()
+            // Read `batchHadSuccess` here, before it's cleared below.
+            notifyBatchCompleteIfBackgrounded()
         }
         if !activeNow { batchHadSuccess = false }
         queueWasActive = activeNow
+        // Release the assertion once the queue has gone idle; guarded so an
+        // already-idle queue never double-ends the same (or a nil) token.
+        if !activeNow, let token = processActivity {
+            ProcessInfo.processInfo.endActivity(token)
+            processActivity = nil
+        }
     }
 
     private func fireConfettiIfMotionAllowed() {
         guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
         confettiTrigger &+= 1
+    }
+
+    /// Posts a local notification when the batch finishes while the app is
+    /// backgrounded (the user has switched away and won't see the in-window
+    /// confetti/status). No-ops silently if notification permission was
+    /// denied — this must never crash on an unsigned dev build.
+    private func notifyBatchCompleteIfBackgrounded() {
+        guard !NSApp.isActive, batchHadSuccess else { return }
+        let doneCount = queue.jobs.filter {
+            if case .done = $0.status { return true }; return false
+        }.count
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert]) { granted, _ in
+            guard granted else { return }
+            let content = UNMutableNotificationContent()
+            content.title = "Compression finished"
+            content.body = "\(doneCount) file\(doneCount == 1 ? "" : "s") ready."
+            UNUserNotificationCenter.current().add(
+                UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
+        }
     }
 
     // MARK: - Smart rename

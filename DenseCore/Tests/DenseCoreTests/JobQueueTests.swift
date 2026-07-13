@@ -92,7 +92,8 @@ final class JobQueueTests: XCTestCase {
         XCTAssertEqual(JobQueue.message(for: CompressError.probeFailed("no audio stream")),
                        "No audio track in this file")
         XCTAssertEqual(JobQueue.message(for: CompressError.probeFailed("ffprobe exit 1")),
-                       "Not a readable video file")
+                       "Can't read this file — it may be corrupted or unsupported (ffprobe exit 1)")
+        XCTAssertTrue(JobQueue.message(for: CompressError.probeFailed("bad header")).contains("corrupted"))
     }
 
     func testCancelAllNeverShowsRawFfmpegFailureMessage() async throws {

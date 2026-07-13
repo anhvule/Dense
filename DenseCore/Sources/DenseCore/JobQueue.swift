@@ -87,7 +87,7 @@ public final class JobQueue: ObservableObject {
         case CompressError.probeFailed(let reason):
             if reason.contains("no audio stream") { return "No audio track in this file" }
             if reason.contains("Password-protected") { return "Password-protected PDF — remove the password first" }
-            return "Not a readable video file"
+            return "Can't read this file — it may be corrupted or unsupported (\(reason))"
         case CompressError.ffmpegFailed(_, let last): return "Compression failed: \(last.prefix(120))"
         default: return error.localizedDescription
         }
