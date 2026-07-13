@@ -1,7 +1,7 @@
 import Foundation
 
 public enum Preset: String, CaseIterable, Identifiable, Codable {
-    case discord, discordNitro, email, youtube, webSocial, high, balanced, small
+    case discord, discordNitro, email, youtube, webSocial, high, balanced, small, slack, emailSmall
     public var id: String { rawValue }
 
     public var displayName: String {
@@ -14,6 +14,8 @@ public enum Preset: String, CaseIterable, Identifiable, Codable {
         case .high: return "High Quality"
         case .balanced: return "Balanced"
         case .small: return "Small File"
+        case .slack: return "Slack (50 MB)"
+        case .emailSmall: return "Email (10 MB)"
         }
     }
 
@@ -21,6 +23,8 @@ public enum Preset: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .discord, .email: return 25
         case .discordNitro: return 500
+        case .slack: return 50
+        case .emailSmall: return 10
         default: return nil
         }
     }
@@ -31,7 +35,7 @@ public enum Preset: String, CaseIterable, Identifiable, Codable {
         case .youtube: return 2160
         case .webSocial, .balanced: return 1080
         case .small: return 720
-        case .discord, .email: return 1080
+        case .discord, .email, .slack, .emailSmall: return 1080
         case .discordNitro, .high: return nil
         }
     }
@@ -43,7 +47,7 @@ public enum Preset: String, CaseIterable, Identifiable, Codable {
         case .high: return 8_000_000
         case .webSocial, .balanced: return 5_000_000
         case .small: return 2_000_000
-        case .discord, .discordNitro, .email: return 8_000_000
+        case .discord, .discordNitro, .email, .slack, .emailSmall: return 8_000_000
         }
     }
 }
