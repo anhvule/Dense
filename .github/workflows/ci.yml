@@ -1,0 +1,28 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  test-and-build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache ffmpeg universal binaries
+        id: ffmpeg-cache
+        uses: actions/cache@v4
+        with:
+          path: Tools/bin
+          key: ffmpeg-${{ hashFiles('Scripts/fetch-ffmpeg.sh') }}
+      - name: Fetch ffmpeg
+        if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
+        run: bash Scripts/fetch-ffmpeg.sh
+      - name: Engine tests
+        run: swift test --package-path DenseCore
+      - name: Release build (unsigned)
+        run: |
+          brew install xcodegen
+          xcodegen generate
+          xcodebuild -project Dense.xcodeproj -scheme Dense -configuration Release \
+            -destination "generic/platform=macOS" \
+            CODE_SIGNING_ALLOWED=NO build
