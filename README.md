@@ -15,5 +15,3 @@ Dense is a native macOS app that compresses videos and PDFs, sized for where the
 - **Batch safety**: Originals are never touched; outputs get a `-compressed` suffix. Drop whole folders; one corrupted or unsupported file won't abort the batch.
 
 - **Robust error handling**: Junk files, password-protected PDFs, vector-only documents, and extreme quality targets fail gracefully with clear feedback and don't stall the queue.
-
-*Note: Screenshots will be updated after the single-pane redesign.*

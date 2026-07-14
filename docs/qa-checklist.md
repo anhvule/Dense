@@ -1,10 +1,11 @@
-# Manual QA Checklist — Dense (destination-dock redesign)
+# Manual QA Checklist — Dense (release pass)
 
 Run this pass by hand on a real Mac before every tagged release. It exists because
-the automated suite (`swift test`, currently 164/164) covers the compression engine,
-argument-building, and state logic — it does not drive the SwiftUI surface, real
-drag-and-drop, the Finder, System Settings, or a real Lemon Squeezy store. Every
-item below is something a person must actually watch happen.
+the automated suite (`swift test`) covers the compression engine, argument-building,
+and state logic — it does not drive the SwiftUI surface, real drag-and-drop, the
+Finder, System Settings, notarization/Gatekeeper, or a real Lemon Squeezy store.
+Every item below is something a person must actually watch happen. Run on macOS 14+,
+in both light and dark appearance.
 
 Use a mix of test clips: at least one small MP4, one large (>500MB) MP4, one MOV,
 an image (`.jpg`/`.png`/`.heic`), a `.gif`, a `.pdf`, a genuinely unsupported file
@@ -14,94 +15,68 @@ Check off each box and write the actual result next to any failure.
 
 ---
 
-## 1. Drop paths
+## 1. Sidebar & destinations
 
-- [ ] **Drop onto the Discord dock card** with the queue empty. Expected: file is
-      accepted, added to the queue, and compresses using the Discord preset
-      (≤25MB target) — confirm by checking the Advanced panel shows Discord's
-      settings were applied (or by inspecting the output file size).
-- [ ] **Drop onto the Email dock card.** Expected: same as above, using the Email
-      preset (≤25MB target).
-- [ ] **Drop onto the YouTube dock card.** Expected: accepted, compresses using
-      the YouTube preset (quality-oriented, not size-capped).
-- [ ] **Drop onto the Web/Social dock card.** Expected: accepted, compresses
-      using the Web/Social preset (1080p cap).
-- [ ] **Drop onto the Custom dock card.** Expected: accepted, uses whatever the
-      Advanced panel currently has configured (Balanced/custom preset).
-- [ ] **Dropping onto a dock card also selects it** — after the drop, the card
-      shows the "selected" highlight (accent border/fill) and stays selected for
-      the *next* drop/click, not just for that one job.
-- [ ] **Global drop** — drag a video onto the main window background (not onto
-      any dock card). Expected: file is accepted using whatever preset is
-      currently selected (the highlighted dock card), and processing starts.
+- [ ] All 7 destinations render with vibrancy; budgets right-aligned, monospaced
+      (Discord ≤25MB, Slack ≤50MB, Email — strict ≤10MB, Email ≤25MB, Web/Social
+      1080p, YouTube quality-oriented, Custom "your rules").
+- [ ] Clicking a row (no drag) selects it — highlight moves, VoiceOver label
+      changes to include ", selected".
+- [ ] **Selection persists across relaunch** — select a non-default destination
+      (e.g. Slack), quit the app fully (Cmd-Q), relaunch. Expected: Slack is
+      still the selected/highlighted row, and a drop immediately after launch
+      uses the Slack preset.
+- [ ] **Drop video onto the "Slack" row** → job uses the 50 MB budget, Slack
+      becomes selected.
+- [ ] **Drop PDF onto "Email — strict"** → output ≤ 10 MB or fails with the
+      closest achievable size.
+
+## 2. Queue pane
+
+- [ ] Empty state names the current destination and updates immediately when
+      the sidebar selection changes.
+- [ ] **Whole pane accepts drops** — files and folders, mixed video/PDF/image/GIF
+      in one gesture — not just a specific row or region.
 - [ ] **Folder drop (one level)** — drag a folder containing 2–3 videos and one
-      non-video file onto the window. Expected: all videos inside are added to
-      the queue (one level of expansion only — a video nested two folders deep
-      should NOT be picked up), the non-video file inside is silently skipped,
-      and no rejection banner fires for the folder itself.
+      non-video file onto the pane. Expected: all supported files inside are
+      added to the queue (one level of expansion only — a file nested two
+      folders deep should NOT be picked up), unsupported files inside are
+      silently skipped, and no rejection banner fires for the folder itself.
 - [ ] **Unsupported-type rejection, empty queue** — with no jobs in the queue,
       drop a genuinely unsupported file (e.g. `.txt` or `.zip`). Expected:
       nothing is added to the queue, and the orange banner "That file type
-      isn't supported yet." appears (the retired "Images & PDFs coming
-      soon" copy must never appear — images, GIFs, and PDFs are all
-      supported job kinds now).
+      isn't supported yet." appears (images, GIFs, and PDFs are all supported
+      job kinds — that copy must never appear for them).
 - [ ] **Unsupported-type rejection, non-empty queue** — with at least one job
       already queued/compressing, drop an unsupported file. Expected: the
-      existing queue is undisturbed, the same rejection banner appears (it
-      must still show even though the empty-state placeholder isn't visible).
-- [ ] **Mixed drop** — drop a video and an unsupported file together in one
-      gesture. Expected: the video is accepted and queued, the unsupported
-      file is silently skipped, and NO rejection banner appears. (Deliberate
-      rule: the banner only appears when *nothing* in the drop was usable —
-      if at least one file was accepted, the drop counts as a success and
-      stays silent.)
-- [ ] **Image/GIF/PDF drops are NOT rejected** — drop a `.jpg`, a `.gif`, and
-      a `.pdf` (separately or together). Expected: each is accepted into the
-      queue and routed to its own job kind (image compression, GIF
-      optimization, PDF compression) — none of them trigger the unsupported-
-      type rejection banner.
-
-## 2. Destination dock
-
-- [ ] All five cards render with correct icon, title, and subtitle (Discord
-      "≤25MB", Email "≤25MB", YouTube "Quality", Web/Social "1080p", Custom
-      "Your rules").
-- [ ] Clicking a card (no drag) selects it — highlight moves, VoiceOver label
-      changes to include ", selected".
-- [ ] **Preset persists across relaunch** — select a non-default card (e.g.
-      YouTube), quit the app fully (Cmd-Q), relaunch. Expected: YouTube is still
-      the selected/highlighted card, and a global drop immediately after launch
-      uses the YouTube preset.
-
-## 3. File rows / shrink-meter bars
-
-- [ ] **Shrink-bar animation during a real encode** — queue a large real video
-      (not an instant no-op) and watch the row while it's `running`. Expected:
-      the bar visibly and smoothly shrinks left-to-right as progress advances
-      (not a static bar, not a jump-cut at completion), and the percentage text
-      next to the row updates in step.
-- [ ] **Thumbnails on real videos** — queue several different real video files.
-      Expected: each row eventually shows an actual frame thumbnail (not the
-      generic film-icon placeholder) once `ThumbnailLoader` resolves; different
-      videos show visibly different thumbnails.
-- [ ] Row shows correct "waiting" state (bar full, "Waiting…" subtitle) before
-      its turn.
+      existing queue is undisturbed, the same rejection banner appears.
+- [ ] **Mixed drop** — drop a supported file and an unsupported file together in
+      one gesture. Expected: the supported file is accepted and queued, the
+      unsupported file is silently skipped, and NO rejection banner appears
+      (the banner only fires when *nothing* in the drop was usable).
+- [ ] **Rows: live progress** — the shrink bar visibly and smoothly shrinks
+      left-to-right as a real (non-instant) encode advances, not a static bar
+      or a jump-cut at completion; the percentage text updates in step.
+- [ ] **Thumbnails on real videos** — each row eventually shows an actual frame
+      thumbnail (not the generic placeholder) once resolved; different videos
+      show visibly different thumbnails. PDF rows show a document icon; video
+      rows show thumbnail + play badge.
+- [ ] Clicking a row shows a teal selection ring; savings % shown on completed
+      rows.
 - [ ] On completion, row shows "input size → output size", the green "−NN%"
-      savings figure, and a magnifying-glass button that reveals the output file
-      selected in Finder when clicked.
+      savings figure, and a magnifying-glass button that reveals the output
+      file selected in Finder when clicked.
 - [ ] A file that's already small/optimized shows the "Already optimized"
       subtitle and is not needlessly recompressed.
 - [ ] A failed job shows the failure message in red instead of a size line.
-
-## 4. Batch header
-
-- [ ] With an empty queue, header shows just "Dense" (no summary line, no
-      Cancel/Clear buttons).
+- [ ] **Toolbar** — with an empty queue, only "Dense" shows (no summary line,
+      no Cancel/Clear buttons). Cancel All / Clear appear only once jobs exist;
+      the batch summary line appears in the subtitle.
 - [ ] **Batch summary with a real multi-file batch** — queue 4–5 real files of
-      varying sizes and let them all finish. Expected: the header line reads
+      varying sizes and let them all finish. Expected: the summary reads
       "N files · saved X MB (−NN%)" and the saved bytes/percent match manual
-      arithmetic on the actual input/output file sizes (spot-check with Finder
-      "Get Info" or `ls -la`).
+      arithmetic on the actual input/output file sizes (spot-check with
+      Finder "Get Info" or `ls -la`).
 - [ ] **Cancel all mid-encode** — start a batch of several large files, click
       "Cancel all" while at least one job is `running`. Expected: the
       in-progress ffmpeg process is actually killed (check Activity Monitor —
@@ -110,9 +85,21 @@ Check off each box and write the actual result next to any failure.
 - [ ] "Clear" removes finished (done/failed) rows but does not disturb any job
       still queued or running.
 
-## 5. Advanced panel — each option changes real ffmpeg output
+## 3. Inspector
 
-Toggle the panel open (slider icon in the header). For every option below,
+- [ ] Row click opens the inspector; the toolbar button toggles it.
+- [ ] **Video**: two frames shown side-by-side (original vs. compressed), with
+      a size estimate under the Compressed pane.
+- [ ] Releasing the target-size slider re-renders the estimate; clicking Apply
+      enqueues a job that lands near the chosen target.
+- [ ] **PDF**: page shown side-by-side; Good/Balanced/Small re-renders the
+      preview; text stays legible at the Good tier.
+- [ ] Selecting a corrupt file shows error text, no Apply button, and no
+      crash.
+
+## 4. Advanced panel — each option changes real ffmpeg output
+
+Toggle the panel open (slider icon in the toolbar). For every option below,
 change it, run a compression, and **verify against the actual output file**
 (via `ffprobe`, Finder Get Info, or QuickTime inspector) — not just that the UI
 control moved.
@@ -126,9 +113,9 @@ control moved.
 - [ ] **Resolution cap**: set each non-default resolution option and confirm
       `ffprobe`-reported output dimensions match (long edge or height per the
       option, not just "smaller than input").
-- [ ] **Resolution → Preset default**: leaving this unset lets the selected dock
-      preset's own resolution rule apply (e.g. Web/Social's 1080p) rather than
-      forcing a different cap.
+- [ ] **Resolution → Preset default**: leaving this unset lets the selected
+      destination's own resolution rule apply (e.g. Web/Social's 1080p) rather
+      than forcing a different cap.
 - [ ] **Target size (MB)**: set an explicit target (e.g. type "10"), compress a
       file that would otherwise be larger, and confirm the resulting output
       file size is at/under the typed target (within reasonable encoder
@@ -167,7 +154,7 @@ control moved.
       wide (e.g. 800), compress the same source both ways, and confirm the
       output GIF pixel width matches what was set.
 
-## 6. Output handling / engine safety
+## 5. Output handling / engine safety
 
 - [ ] Compressing a file with "Next to original" + default suffix never
       overwrites the source (engine guard: output path must never equal input
@@ -181,7 +168,36 @@ control moved.
       output path. Avoid same-stem batches into a custom folder for now; this
       is a known limitation, not a regression to chase down before v1.
 
-## 7. Licensing / trial
+## 6. Edge cases
+
+- [ ] Junk `.mp4` (e.g. `echo junk > bad.mp4`) → row fails with the
+      "corrupted or unsupported" copy, batch continues.
+- [ ] A 1-hour clip compressed at the Discord destination fails fast with the
+      closest achievable MB rather than hanging or silently missing budget.
+- [ ] A vector-only PDF is skipped with "Already optimized".
+- [ ] A password-protected PDF shows a failed row; batch continues.
+- [ ] **Backgrounded during a batch** — switch to another app mid-batch and let
+      it finish. Expected: a completion notification appears (the first time,
+      macOS asks for notification permission).
+- [ ] **Long encode doesn't sleep the Mac** — during a lengthy real encode,
+      the Mac doesn't go to sleep and App Nap doesn't stall progress.
+- [ ] Originals are untouched in every scenario above.
+- [ ] Trial banner and license gate still render correctly (no regression from
+      the single-pane layout).
+
+## 7. HEVC legacy migration
+
+- [ ] **Migration for a user upgrading with legacy `useHEVC=true`** — simulate
+      a pre-redesign install by setting
+      `defaults write app.dense.mac useHEVC -bool true`
+      and leaving `containerRaw` unset (or `mp4`), then launch the current
+      build. Expected: the one-time migration folds this into
+      `containerRaw = "mp4-hevc"`, the Format picker shows "MP4 · HEVC"
+      selected on first launch, and this migration does not re-fire (and does
+      not fight a user who deliberately picks MP4 · H.264 afterward) on
+      subsequent launches.
+
+## 8. Licensing / trial
 
 - [ ] Fresh install shows the 7-day trial banner with days-remaining that
       counts down correctly.
@@ -199,48 +215,43 @@ control moved.
 - [ ] Activation failure (bad key / no network) shows the inline error message
       and does not silently unlock the app.
 
-## 8. HEVC legacy migration
-
-- [ ] **Migration for a user upgrading with legacy `useHEVC=true`** — simulate
-      a pre-redesign install by setting `defaults write <bundle-id> useHEVC -bool true`
-      and leaving `containerRaw` unset (or `mp4`), then launch the redesigned
-      build. Expected: the one-time migration folds this into
-      `containerRaw = "mp4-hevc"`, the Format picker shows "MP4 · HEVC"
-      selected on first launch, and this migration does not re-fire (and does
-      not fight a user who deliberately picks MP4 · H.264 afterward) on
-      subsequent launches.
-
 ## 9. Sparkle updates
 
 - [ ] App checks for updates on schedule / via manual "Check for Updates…" and
       the appcast reflects the current shipped version.
 - [ ] Update flow downloads, verifies signature, and installs without manual
       Gatekeeper workarounds.
-- [ ] **Real 1.0.0 → 1.0.1 upgrade via a local appcast** — serve `Site/` locally
-      (e.g. `python3 -m http.server` from `Site/`), point a locally-built
-      1.0.0 install's `SUFeedURL` at it, then bump both `MARKETING_VERSION`
-      and `CURRENT_PROJECT_VERSION`/`sparkle:version` to a 1.0.1 build and
-      re-serve the updated appcast. Confirm Sparkle detects, downloads,
-      verifies, and installs the update, and that About shows 1.0.1 afterward.
+- [ ] **Sparkle placeholder-feed hang regression** — with the shipped/dev
+      build's `Info.plist` `SUFeedURL` still containing the
+      `REPLACE-AT-LAUNCH` placeholder (the normal state until the real feed
+      is set at launch), launch the app and confirm it does **not** hang or
+      show a blocking "Unable to Check For Updates" alert — the window
+      appears normally and the app stays fully interactive.
+- [ ] **"Check for Updates…" is a safe no-op on a placeholder build** — with
+      the placeholder feed still in place, select Check for Updates… from
+      the menu (it should appear disabled). Confirm nothing crashes or hangs
+      even if triggered.
+- [ ] **Sparkle end-to-end update dry run** — see
+      `docs/superpowers/plans/2026-07-14-production-readiness.md`, Task 9
+      Step 3: host the appcast, build a throwaway `1.0.0-rc1` pointed at it,
+      cut `1.0.0-rc2`, and confirm rc1's "Check for Updates" finds, verifies,
+      downloads, and installs rc2, relaunching as rc2. Requires an actual
+      release-candidate pair; run this once per release cycle rather than on
+      every tagged build.
 
-## 10. Cross-cutting persistence (relaunch)
+## 10. Gatekeeper / first run
 
-Change every setting below in one session, fully quit (Cmd-Q), relaunch, and
-confirm each one is exactly as left:
+- [ ] **Gatekeeper first-run on a clean machine** — see
+      `docs/superpowers/plans/2026-07-14-production-readiness.md`, Task 8
+      Step 3: copy the signed, notarized DMG to a Mac (or fresh macOS VM /
+      second user account with cleared quarantine state) that has never run
+      Dense, mount, drag to /Applications, launch. Expected: the standard
+      "downloaded from the internet" first-run dialog, **no** "unidentified
+      developer" block, and the app reaches the main window and compresses a
+      fixture clip. Requires a signed/notarized release build; run once per
+      release candidate.
 
-- [ ] Selected dock preset
-- [ ] Format (H.264 / HEVC / MOV)
-- [ ] Resolution cap
-- [ ] Target size MB text
-- [ ] Remove audio toggle
-- [ ] Output folder mode (next-to-original vs custom) and the stored custom
-      path
-- [ ] Filename suffix text
-- [ ] Move-originals-to-Trash toggle
-- [ ] GIF mode toggle, fps, and width steppers
-- [ ] Watched folders list (paths, per-folder presets, enable toggles)
-
-## 11. Folder watching
+## 11. Watched folders
 
 - [ ] **Add a watched folder** via Advanced → Watched folders → "Add folder…",
       then copy a video into it. Expected: after a ~2s debounce (plus a 1s
@@ -254,15 +265,15 @@ confirm each one is exactly as left:
       auto-compressed on the next launch (deliberate: prevents surprise
       mass-compression of a backlog). Do not file this as a failure.
 - [ ] **Per-folder preset** — set a watched folder to Small File, drop a clip
-      in, and confirm the output reflects that preset while the dock's
-      selected preset is unchanged.
+      in, and confirm the output reflects that preset while the sidebar's
+      selected destination is unchanged.
 - [ ] **Editing one folder doesn't disturb another** — while a file is mid-copy
       into folder A, toggle/edit folder B; the folder-A file must still be
       picked up and compressed once its copy completes.
 - [ ] **Missing folder** — delete a watched folder on disk, reopen the panel:
       row shows a warning icon, watching is skipped, no crash.
 
-## 12. Floating drop zone & completion confetti (F7)
+## 12. Floating drop zone & completion confetti
 
 - [ ] **Show/hide the drop zone** — click the drop-zone header icon. Expected:
       a small circular always-on-top panel appears near the top-right of the
@@ -274,7 +285,7 @@ confirm each one is exactly as left:
       drop.
 - [ ] **Dropping onto the zone queues a real job** — drag a file onto the
       circle. Expected: it's added to the queue using the currently selected
-      dock preset, identical to a background drop onto the main window.
+      destination, identical to a drop onto the main window.
 - [ ] **Position persists** — drag the panel to a new spot, quit and relaunch
       Dense, re-show the drop zone. Expected: it reappears at the dragged
       position, not the default corner.
@@ -292,7 +303,12 @@ confirm each one is exactly as left:
       finish at different times within the same batch. Expected: exactly one
       burst when the whole batch goes idle, not one per completed file.
 
-## 13. Local HTTP API (F9)
+## 13. Deep links (`dense://`)
+
+- [ ] A `dense://` deep link enqueues into the queue pane the same as a
+      manual drop would.
+
+## 14. Local HTTP API
 
 - [ ] **Off by default** — on a fresh install, confirm the Advanced panel's
       "Local API" toggle is off and `curl http://127.0.0.1:4499/v1/jobs`
@@ -332,12 +348,12 @@ confirm each one is exactly as left:
       `~/Library/Application Support/Dense/api-token` is removed; it must
       not linger for a process that isn't actually listening.
 - [ ] **API-triggered compress never changes the default preset** — note the
-      currently selected dock preset, fire an API compress with a different
-      preset, then do a manual drop with no dock card selected. Expected:
-      the manual drop still uses the *original* default preset, not the
+      currently selected destination, fire an API compress with a different
+      preset, then do a manual drop with no destination change. Expected:
+      the manual drop still uses the *original* default destination, not the
       one the API call used.
 
-## 14. Raycast extension (F10)
+## 15. Raycast extension
 
 Manual flow — the extension itself has no `swift test` coverage (it's a
 separate TypeScript project in `integrations/raycast/`); this section is the
@@ -364,7 +380,7 @@ substitute end-to-end check.
       a clean VM) running either command should show a "Dense Isn't
       Installed" toast with a link, not a silent failure or a crash.
 
-## 15. Smart rename & Sparkle placeholder guard (F11)
+## 16. Smart rename
 
 - [ ] **Off by default** — on a fresh install, confirm "Smart names for
       images" in the Advanced panel is off, and the caption "Uses on-device
@@ -388,18 +404,23 @@ substitute end-to-end check.
 - [ ] **Toggle only affects `.image` jobs** — with smart rename on, compress
       a video and a PDF. Expected: neither output is renamed (the feature
       only applies to image compression outputs).
-- [ ] **Sparkle placeholder-feed hang regression** — with the shipped/dev
-      build's `Info.plist` `SUFeedURL` still containing the
-      `REPLACE-AT-LAUNCH` placeholder (the normal state until the real feed
-      is set at launch), launch the app and confirm it does **not** hang or
-      show a blocking "Unable to Check For Updates" alert — the window
-      appears normally and the app stays fully interactive. This is the
-      exact bug that blocked F6/F8/F9 verification; regressing it silently
-      would reintroduce that failure mode for every future task.
-- [ ] **"Check for Updates…" is a safe no-op on a placeholder build** — with
-      the placeholder feed still in place, select Check for Updates… from
-      the menu (it should appear disabled). Confirm nothing crashes or hangs
-      even if triggered.
+
+## 17. Cross-cutting persistence (relaunch)
+
+Change every setting below in one session, fully quit (Cmd-Q), relaunch, and
+confirm each one is exactly as left:
+
+- [ ] Selected destination
+- [ ] Format (H.264 / HEVC / MOV)
+- [ ] Resolution cap
+- [ ] Target size MB text
+- [ ] Remove audio toggle
+- [ ] Output folder mode (next-to-original vs custom) and the stored custom
+      path
+- [ ] Filename suffix text
+- [ ] Move-originals-to-Trash toggle
+- [ ] GIF mode toggle, fps, and width steppers
+- [ ] Watched folders list (paths, per-folder presets, enable toggles)
 
 ---
 
