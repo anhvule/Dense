@@ -12,7 +12,7 @@ targets:
   Dense:
     type: application
     platform: macOS
-    deploymentTarget: "13.0"
+    deploymentTarget: "14.0"
     sources:
       - App
       - path: Tools/bin
@@ -37,7 +37,7 @@ targets:
         CFBundleDisplayName: Dense
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        LSMinimumSystemVersion: "13.0"
+        LSMinimumSystemVersion: "14.0"
         NSHumanReadableCopyright: "Uses FFmpeg (ffmpeg.org) under the GPL, run as a separate process. Source: see website."
         SUFeedURL: https://REPLACE-AT-LAUNCH.example/appcast.xml
         SUPublicEDKey: REPLACE-AT-LAUNCH-EDKEY

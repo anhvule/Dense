@@ -247,3 +247,64 @@ public struct PDFCompressor {
         context.draw(jpegImage, in: box)
     }
 }
+
+extension PDFCompressor {
+    /// Walks `PDFQuality.allCases` from `.good` downward, stopping at the
+    /// first rung whose output fits `targetMB`. If even `.small` doesn't
+    /// fit, throws `CompressError.unreachableTarget(closestMB:)` reporting
+    /// the smallest size actually achieved. If every rung reports
+    /// `.outputNotSmaller` (a vector-only PDF — nothing to shrink), that
+    /// error propagates instead.
+    public func compress(input: URL, targetMB: Double, outputDir: URL? = nil,
+                         suffix: String = "-compressed",
+                         progress: @escaping (Double) -> Void) async throws -> CompressionResult {
+        let rungs = PDFQuality.allCases   // declared largest→smallest: good, balanced, small
+        let targetBytes = Int64(targetMB * 1_000_000)
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("dense-pdf-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        let dir = outputDir ?? input.deletingLastPathComponent()
+        let final = dir.appendingPathComponent(
+            input.deletingPathExtension().lastPathComponent + suffix + ".pdf")
+        guard final.standardizedFileURL != input.standardizedFileURL else {
+            throw CompressError.ffmpegFailed(exitCode: -1,
+                lastLine: "Output would overwrite the original — change the suffix or output folder")
+        }
+
+        var best: CompressionResult?
+        var notSmallerCount = 0
+        for (i, rung) in rungs.enumerated() {
+            let result: CompressionResult
+            do {
+                result = try await compress(input: input, quality: rung, outputDir: tempDir,
+                                            suffix: "-\(rung.rawValue)") { f in
+                    progress((Double(i) + f) / Double(rungs.count))
+                }
+            } catch CompressError.outputNotSmaller {
+                // Vector-only page set, or this rung couldn't beat the input.
+                notSmallerCount += 1
+                continue
+            }
+            if best == nil || result.outputBytes < best!.outputBytes { best = result }
+            if result.outputBytes <= targetBytes { break }
+        }
+
+        guard let winner = best else {
+            // Every rung reported nothing to shrink — treat as already optimized.
+            if notSmallerCount == rungs.count { throw CompressError.outputNotSmaller }
+            throw CompressError.probeFailed("PDF re-encode produced no output")
+        }
+        guard winner.outputBytes <= targetBytes else {
+            throw CompressError.unreachableTarget(
+                closestMB: Double(winner.outputBytes) / 1_000_000)
+        }
+        try? FileManager.default.removeItem(at: final)
+        try FileManager.default.moveItem(at: winner.outputURL, to: final)
+        progress(1.0)
+        return CompressionResult(outputURL: final,
+                                 inputBytes: winner.inputBytes,
+                                 outputBytes: winner.outputBytes)
+    }
+}

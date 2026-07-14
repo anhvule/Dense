@@ -1,11 +1,18 @@
 import SwiftUI
 import AppKit
 import Combine
+import UserNotifications
 import DenseCore
 
 @MainActor
 final class AppEnvironment: ObservableObject {
     let queue: JobQueue
+    /// Same ffmpeg/ffprobe locations the queue's compressors were built
+    /// from — stored here so the preview inspector can build a
+    /// `PreviewRenderer` without re-walking `locateTool` a second time.
+    let ffmpegURL: URL
+    let ffprobeURL: URL
+    lazy var previewRenderer = PreviewRenderer(ffmpegURL: ffmpegURL, ffprobeURL: ffprobeURL)
     let licenseState = LicenseState(store: KeychainStore())
     @Published var licenseStatus: LicenseStatus = .licensed
     @AppStorage("dropZoneEnabled") private(set) var dropZoneEnabled: Bool = false
@@ -41,6 +48,9 @@ final class AppEnvironment: ObservableObject {
     /// `SmartRename`). Never touches originals.
     @AppStorage("smartRenameEnabled") var smartRenameEnabled: Bool = false
     @AppStorage("pdfQualityRaw") var pdfQualityRaw: String = PDFQuality.balanced.rawValue
+    @AppStorage("destinationID") var destinationID: String = "email25"
+    @Published var selectedJobID: UUID?
+    @Published var inspectorPresented: Bool = false
     @AppStorage("didMigrateHEVCToContainer") private var didMigrateHEVCToContainer: Bool = false
     /// 0 = Off; otherwise the fps cap passed straight to `CompressionOptions.fpsCap`.
     @AppStorage("fpsCapRaw") var fpsCapRaw: Int = 0
@@ -75,11 +85,18 @@ final class AppEnvironment: ObservableObject {
     /// starts (new adds arriving while the queue was idle) and whenever a
     /// burst fires.
     private var batchHadSuccess = false
+    /// Sleep/App Nap assertion held while the queue has any queued/running
+    /// job — released the moment the batch goes idle. `beginActivity` only
+    /// fires when this is `nil` (guards against double-assert); `endActivity`
+    /// only fires when it isn't (guards against double-release).
+    private var processActivity: NSObjectProtocol?
 
     var defaultPreset: Preset {
         get { Preset(rawValue: defaultPresetRaw) ?? .balanced }
         set { defaultPresetRaw = newValue.rawValue }
     }
+
+    var destination: Destination { Destination.byID(destinationID) }
 
     var options: CompressionOptions {
         var opts = CompressionOptions(preset: defaultPreset)
@@ -198,11 +215,24 @@ final class AppEnvironment: ObservableObject {
         customOutputPath = path
     }
 
+    /// Central setter for the active destination. `@AppStorage` on a plain
+    /// ObservableObject doesn't emit `objectWillChange` (same caveat as the
+    /// other setters here), so views reading `destination`/`defaultPreset`
+    /// (the queue pane's title, subtitle, and empty state) won't refresh
+    /// unless we publish manually.
+    func selectDestination(_ id: String) {
+        objectWillChange.send()
+        destinationID = id
+        defaultPreset = Destination.byID(id).preset
+    }
+
     init() {
         guard let ffmpeg = FFmpegRunner.locateTool(named: "ffmpeg"),
               let ffprobe = FFmpegRunner.locateTool(named: "ffprobe") else {
             fatalError("bundled ffmpeg missing — check project.yml resources")
         }
+        ffmpegURL = ffmpeg
+        ffprobeURL = ffprobe
         queue = JobQueue(compressor: VideoCompressor(ffmpegURL: ffmpeg, ffprobeURL: ffprobe),
                          gifConverter: GIFConverter(ffmpegURL: ffmpeg, ffprobeURL: ffprobe),
                          imageCompressor: ImageCompressor(ffmpegURL: ffmpeg),
@@ -290,6 +320,17 @@ final class AppEnvironment: ObservableObject {
                 classify(url)
             }
         }
+        // Disk preflight: refuse the whole batch up front rather than let it
+        // fail job-by-job partway through and leave half-written outputs.
+        let batchBytes = (videos + images + gifs + pdfs).reduce(Int64(0)) { sum, url in
+            sum + (((try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int64) ?? 0)
+        }
+        let volume = outputDir ?? FileManager.default.homeDirectoryForCurrentUser
+        if let free = DiskSpace.freeBytes(at: volume),
+           let warning = DiskSpace.warning(estimatedBytes: batchBytes, freeBytes: free) {
+            rejectionBanner = warning
+            return 0
+        }
         var effective = options
         if let preset {
             effective.preset = preset
@@ -308,13 +349,33 @@ final class AppEnvironment: ObservableObject {
                       outputDir: outputDir, gifOptions: gifOptions, trashOriginalOnSuccess: trashOriginals)
         }
         if !pdfs.isEmpty {
-            queue.add(urls: pdfs, kind: .pdf, options: effective,
-                      outputDir: outputDir, pdfQuality: pdfQuality, trashOriginalOnSuccess: trashOriginals)
+            // PDFs share the destination's byte budget (effectiveTargetMB covers
+            // both the preset target and a custom-MB override); quality-first
+            // destinations fall back to the fixed-quality rung.
+            let quality = Destination.all.first { $0.preset == effective.preset }?.pdfQuality ?? pdfQuality
+            queue.add(urls: pdfs, kind: .pdf, options: effective, outputDir: outputDir,
+                      pdfQuality: quality, pdfTargetMB: effective.effectiveTargetMB,
+                      trashOriginalOnSuccess: trashOriginals)
         }
         return videos.count + images.count + gifs.count + pdfs.count
     }
 
     func handleDrop(urls: [URL]) -> Int { handleDrop(urls: urls, preset: nil) }
+
+    /// GUI drop entry point. Runs `handleDrop` and owns the rejection banner:
+    /// a disk-space rejection (set by `handleDrop` itself) survives, an
+    /// all-unsupported drop shows the type message, and an accepted drop clears
+    /// any stale banner. The raw `handleDrop` stays in use by the folder
+    /// watcher and deep-link paths, which manage their own messaging.
+    @discardableResult
+    func handleGUIDrop(urls: [URL], preset: Preset? = nil) -> Int {
+        rejectionBanner = nil                       // clear stale; handleDrop sets the disk warning if needed
+        let accepted = handleDrop(urls: urls, preset: preset)
+        if rejectionBanner == nil, accepted == 0, !urls.isEmpty {
+            rejectionBanner = "That file type isn't supported yet."
+        }
+        return accepted
+    }
 
     // MARK: - Deep linking (dense://compress)
 
@@ -465,6 +526,14 @@ final class AppEnvironment: ObservableObject {
             default: return false
             }
         }
+        // Hold a sleep/App Nap assertion for as long as any job is queued or
+        // running — begins the moment the queue goes active, guarded so a
+        // still-active queue never re-asserts (and leaks a second token).
+        if activeNow, processActivity == nil {
+            processActivity = ProcessInfo.processInfo.beginActivity(
+                options: [.userInitiated, .idleSystemSleepDisabled],
+                reason: "Compressing files")
+        }
         if activeNow && !queueWasActive {
             // A fresh batch just became active (new files dropped while the
             // queue was idle) — forget whatever the previous, already
@@ -473,14 +542,41 @@ final class AppEnvironment: ObservableObject {
         }
         if !activeNow && queueWasActive && !jobs.isEmpty && batchHadSuccess {
             fireConfettiIfMotionAllowed()
+            // Read `batchHadSuccess` here, before it's cleared below.
+            notifyBatchCompleteIfBackgrounded()
         }
         if !activeNow { batchHadSuccess = false }
         queueWasActive = activeNow
+        // Release the assertion once the queue has gone idle; guarded so an
+        // already-idle queue never double-ends the same (or a nil) token.
+        if !activeNow, let token = processActivity {
+            ProcessInfo.processInfo.endActivity(token)
+            processActivity = nil
+        }
     }
 
     private func fireConfettiIfMotionAllowed() {
         guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
         confettiTrigger &+= 1
+    }
+
+    /// Posts a local notification when the batch finishes while the app is
+    /// backgrounded (the user has switched away and won't see the in-window
+    /// confetti/status). No-ops silently if notification permission was
+    /// denied — this must never crash on an unsigned dev build.
+    private func notifyBatchCompleteIfBackgrounded() {
+        guard !NSApp.isActive, batchHadSuccess else { return }
+        let doneCount = queue.jobs.filter {
+            if case .done = $0.status { return true }; return false
+        }.count
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert]) { granted, _ in
+            guard granted else { return }
+            let content = UNMutableNotificationContent()
+            content.title = "Compression finished"
+            content.body = "\(doneCount) file\(doneCount == 1 ? "" : "s") ready."
+            UNUserNotificationCenter.current().add(
+                UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
+        }
     }
 
     // MARK: - Smart rename

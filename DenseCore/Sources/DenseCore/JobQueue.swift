@@ -33,7 +33,7 @@ public final class JobQueue: ObservableObject {
     private let audioExtractor: AudioExtractor
     private let pdfCompressor: PDFCompressor
     private var running = 0
-    private var pending: [(Job, CompressionOptions, URL?, GIFOptions, ImageOptions, PDFQuality, Bool)] = []
+    private var pending: [(Job, CompressionOptions, URL?, GIFOptions, ImageOptions, PDFQuality, Double?, Bool)] = []
     private var tasks: [UUID: Task<Void, Never>] = [:]
 
     public init(compressor: VideoCompressor, gifConverter: GIFConverter, imageCompressor: ImageCompressor,
@@ -47,11 +47,11 @@ public final class JobQueue: ObservableObject {
 
     public func add(urls: [URL], kind: JobKind, options: CompressionOptions, outputDir: URL?,
                     gifOptions: GIFOptions = GIFOptions(), imageOptions: ImageOptions = ImageOptions(),
-                    pdfQuality: PDFQuality = .balanced, trashOriginalOnSuccess: Bool = false) {
+                    pdfQuality: PDFQuality = .balanced, pdfTargetMB: Double? = nil, trashOriginalOnSuccess: Bool = false) {
         for url in urls {
             let job = Job(input: url, kind: kind)
             jobs.append(job)
-            pending.append((job, options, outputDir, gifOptions, imageOptions, pdfQuality, trashOriginalOnSuccess))
+            pending.append((job, options, outputDir, gifOptions, imageOptions, pdfQuality, pdfTargetMB, trashOriginalOnSuccess))
         }
         pump()
     }
@@ -87,7 +87,7 @@ public final class JobQueue: ObservableObject {
         case CompressError.probeFailed(let reason):
             if reason.contains("no audio stream") { return "No audio track in this file" }
             if reason.contains("Password-protected") { return "Password-protected PDF — remove the password first" }
-            return "Not a readable video file"
+            return "Can't read this file — it may be corrupted or unsupported (\(reason))"
         case CompressError.ffmpegFailed(_, let last): return "Compression failed: \(last.prefix(120))"
         default: return error.localizedDescription
         }
@@ -95,12 +95,12 @@ public final class JobQueue: ObservableObject {
 
     private func pump() {
         while running < maxConcurrent, !pending.isEmpty {
-            let (job, options, outputDir, gifOptions, imageOptions, pdfQuality, trashOriginalOnSuccess) = pending.removeFirst()
+            let (job, options, outputDir, gifOptions, imageOptions, pdfQuality, pdfTargetMB, trashOriginalOnSuccess) = pending.removeFirst()
             running += 1
             job.status = .running(progress: 0)
             let task = Task { [weak self] in
                 await self?.execute(job: job, options: options, outputDir: outputDir, gifOptions: gifOptions,
-                                    imageOptions: imageOptions, pdfQuality: pdfQuality,
+                                    imageOptions: imageOptions, pdfQuality: pdfQuality, pdfTargetMB: pdfTargetMB,
                                     trashOriginalOnSuccess: trashOriginalOnSuccess)
                 await MainActor.run { [weak self] in
                     guard let self else { return }
@@ -114,7 +114,7 @@ public final class JobQueue: ObservableObject {
     }
 
     private func execute(job: Job, options: CompressionOptions, outputDir: URL?, gifOptions: GIFOptions,
-                         imageOptions: ImageOptions, pdfQuality: PDFQuality, trashOriginalOnSuccess: Bool) async {
+                         imageOptions: ImageOptions, pdfQuality: PDFQuality, pdfTargetMB: Double?, trashOriginalOnSuccess: Bool) async {
         let onProgress: (Double) -> Void = { p in
             Task { @MainActor in job.status = .running(progress: p) }
         }
@@ -138,9 +138,15 @@ public final class JobQueue: ObservableObject {
                 result = try await audioExtractor.extract(input: job.input, outputDir: outputDir,
                                                           suffix: options.outputSuffix, progress: onProgress)
             case .pdf:
-                result = try await pdfCompressor.compress(input: job.input, quality: pdfQuality,
-                                                          outputDir: outputDir, suffix: options.outputSuffix,
-                                                          progress: onProgress)
+                if let targetMB = pdfTargetMB {
+                    result = try await pdfCompressor.compress(input: job.input, targetMB: targetMB,
+                                                              outputDir: outputDir, suffix: options.outputSuffix,
+                                                              progress: onProgress)
+                } else {
+                    result = try await pdfCompressor.compress(input: job.input, quality: pdfQuality,
+                                                              outputDir: outputDir, suffix: options.outputSuffix,
+                                                              progress: onProgress)
+                }
             }
             job.status = .done(result)
             // Trash applies to replacement-type outputs (a compressed video,

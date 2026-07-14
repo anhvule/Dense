@@ -92,7 +92,8 @@ final class JobQueueTests: XCTestCase {
         XCTAssertEqual(JobQueue.message(for: CompressError.probeFailed("no audio stream")),
                        "No audio track in this file")
         XCTAssertEqual(JobQueue.message(for: CompressError.probeFailed("ffprobe exit 1")),
-                       "Not a readable video file")
+                       "Can't read this file — it may be corrupted or unsupported (ffprobe exit 1)")
+        XCTAssertTrue(JobQueue.message(for: CompressError.probeFailed("bad header")).contains("corrupted"))
     }
 
     func testCancelAllNeverShowsRawFfmpegFailureMessage() async throws {
@@ -264,5 +265,29 @@ final class JobQueueTests: XCTestCase {
             XCTFail("expected done, got \(queue.jobs[0].status)")
         }
         XCTAssertFalse(FileManager.default.fileExists(atPath: tmp.path), "original should be in Trash")
+    }
+
+    func testPDFTargetTooSmallFailsWithClosestSize() async throws {
+        let queue = try makeQueue()
+        let pdf = try PDFFixtures.makeNoisePDF()
+        queue.add(urls: [pdf], kind: .pdf, options: .init(preset: .emailSmall),
+                  outputDir: FileManager.default.temporaryDirectory, pdfTargetMB: 0.01)
+        await waitUntilIdle(queue)
+        guard case .failed(let message) = queue.jobs[0].status else {
+            return XCTFail("expected failed, got \(queue.jobs[0].status)")
+        }
+        XCTAssertTrue(message.contains("MB"), "message should name the closest size: \(message)")
+    }
+
+    func testPDFGenerousTargetSucceeds() async throws {
+        let queue = try makeQueue()
+        let pdf = try PDFFixtures.makeNoisePDF()
+        queue.add(urls: [pdf], kind: .pdf, options: .init(preset: .email),
+                  outputDir: FileManager.default.temporaryDirectory, pdfTargetMB: 100)
+        await waitUntilIdle(queue)
+        guard case .done(let result) = queue.jobs[0].status else {
+            return XCTFail("expected done, got \(queue.jobs[0].status)")
+        }
+        XCTAssertLessThan(result.outputBytes, result.inputBytes)
     }
 }

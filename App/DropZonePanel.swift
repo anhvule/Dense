@@ -79,7 +79,7 @@ private struct DropZoneContentView: View {
         .onDrop(of: [UTType.fileURL], isTargeted: $isTargeted) { providers in
             Task {
                 let urls = await loadDroppedURLs(from: providers)
-                _ = env.handleDrop(urls: urls, preset: nil)
+                env.handleGUIDrop(urls: urls, preset: nil)
             }
             return true
         }
