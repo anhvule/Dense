@@ -53,6 +53,7 @@ final class JobQueueTests: XCTestCase {
     }
 
     func testBatchRunsAllAndBadFileDoesNotAbort() async throws {
+        try HardwareEncoder.skipUnlessAvailable()
         let queue = try makeQueue()
         let bad = FileManager.default.temporaryDirectory.appendingPathComponent("bad.mp4")
         try Data("junk".utf8).write(to: bad)
@@ -68,6 +69,7 @@ final class JobQueueTests: XCTestCase {
     }
 
     func testAlreadyOptimizedIsSkippedNotFailed() async throws {
+        try HardwareEncoder.skipUnlessAvailable()
         let queue = try makeQueue()
         // compress once, then re-compress the tiny output with a high-bitrate preset → not smaller
         let ffmpeg = try XCTUnwrap(FFmpegRunner.locateTool(named: "ffmpeg"))
@@ -131,6 +133,7 @@ final class JobQueueTests: XCTestCase {
 
     @MainActor
     func testTrashOriginalOnSuccess() async throws {
+        try HardwareEncoder.skipUnlessAvailable()
         let queue = try makeQueue()
         let tmp = FileManager.default.temporaryDirectory
             .appendingPathComponent("trash-me-\(UUID().uuidString).mp4")
