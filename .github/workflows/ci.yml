@@ -17,6 +17,8 @@ jobs:
       - name: Fetch ffmpeg
         if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
         run: bash Scripts/fetch-ffmpeg.sh
+      - name: Generate test fixtures
+        run: bash Scripts/make-fixtures.sh
       - name: Engine tests
         run: swift test --package-path DenseCore
       - name: Release build (unsigned)
