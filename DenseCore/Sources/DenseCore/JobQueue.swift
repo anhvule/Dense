@@ -116,7 +116,11 @@ public final class JobQueue: ObservableObject {
     private func execute(job: Job, options: CompressionOptions, outputDir: URL?, gifOptions: GIFOptions,
                          imageOptions: ImageOptions, pdfQuality: PDFQuality, pdfTargetMB: Double?, trashOriginalOnSuccess: Bool) async {
         let onProgress: (Double) -> Void = { p in
-            Task { @MainActor in job.status = .running(progress: p) }
+            // Progress hops can land after execute() has already set a
+            // terminal status; they must not revert it to .running.
+            Task { @MainActor in
+                if case .running = job.status { job.status = .running(progress: p) }
+            }
         }
         do {
             let result: CompressionResult

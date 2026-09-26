@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Licenses — Dense</title>
+  <meta name="description" content="Third-party license attribution and source links for Dense.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-nav">
+    <div class="nav-inner">
+      <a href="index.html" class="logo">Dense</a>
+      <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+      <nav class="nav-links">
+        <a href="index.html#features">Features</a>
+        <a href="pricing.html">Pricing</a>
+        <a href="docs/index.html">Docs</a>
+        <a href="changelog.html">Changelog</a>
+        <a href="#" class="btn-download"><!-- REPLACE-AT-LAUNCH: link to signed DMG --> Download</a>
+      </nav>
+    </div>
+  </header>
+
+  <main style="max-width:720px; text-align:left;">
+    <span class="eyebrow">Licenses</span>
+    <h1 style="font-size:clamp(1.8rem,5vw,2.4rem);">Third-party licenses</h1>
+    <p class="sub" style="margin-bottom:40px;">Attribution and source links for the open-source components Dense bundles.</p>
+
+    <article style="margin-bottom:40px;">
+      <h2 style="font-size:1.3rem; margin-bottom:4px;">FFmpeg</h2>
+      <p style="color:var(--muted); margin-bottom:14px;">
+        Dense bundles <a href="https://ffmpeg.org">FFmpeg 7.1</a>, licensed under the
+        <a href="https://www.gnu.org/licenses/old-licenses/gpl-2.0.html">GNU General Public License, version 2 or later</a>.
+        Dense invokes the bundled <code>ffmpeg</code> and <code>ffprobe</code> binaries as separate processes and does not
+        link against FFmpeg's libraries.
+      </p>
+
+      <h3 style="font-size:1.05rem; margin-bottom:4px;">Corresponding source</h3>
+      <ul style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
+        <li>Upstream FFmpeg 7.1 release source: <a href="https://ffmpeg.org/releases/ffmpeg-7.1.tar.xz">https://ffmpeg.org/releases/ffmpeg-7.1.tar.xz</a></li>
+        <li>The bundled arm64 build was obtained from <a href="https://www.osxexperts.net">osxexperts.net</a>.</li>
+        <li>The bundled x86_64 build was obtained from <a href="https://evermeet.cx/ffmpeg/">evermeet.cx</a>.</li>
+      </ul>
+      <p style="color:var(--muted); margin-bottom:14px;">
+        This page serves as Dense's written offer for the corresponding source of the exact FFmpeg builds it ships.
+        The corresponding source is available at the upstream and build-source links above.
+      </p>
+
+      <p style="color:var(--muted);">FFmpeg is a trademark of Fabrice Bellard. Dense is not affiliated with the FFmpeg project.</p>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>macOS 14+ · Apple Silicon &amp; Intel. Dense uses <a href="https://ffmpeg.org">FFmpeg</a> under the GPL, run as a separate process — build sources: <a href="https://evermeet.cx/ffmpeg/">evermeet.cx (x86_64)</a> and <a href="https://osxexperts.net">osxexperts.net (arm64)</a>.</p>
+      <p>&copy; 2026 Lê Anh Vũ. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="nav.js"></script>
+</body>
+</html>

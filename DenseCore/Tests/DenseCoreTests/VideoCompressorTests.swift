@@ -17,6 +17,7 @@ final class VideoCompressorTests: XCTestCase {
     }
 
     func testCompresses1080pFixtureSmaller() async throws {
+        try HardwareEncoder.skipUnlessAvailable()
         let out = FileManager.default.temporaryDirectory
         var lastProgress = 0.0
         let result = try await makeCompressor().compress(

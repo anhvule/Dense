@@ -187,6 +187,7 @@ final class EncodingControlsTests: XCTestCase {
     /// Smoke test: `-threads 1` (an artificially tight cap) must not break
     /// the encode — the flag is accepted and the pipeline still succeeds.
     func testThreadLimitSmokeEncodeSucceeds() async throws {
+        try HardwareEncoder.skipUnlessAvailable()
         var opts = CompressionOptions(preset: .small); opts.threadLimit = 1
         let out = FileManager.default.temporaryDirectory
         let result = try await makeCompressor().compress(

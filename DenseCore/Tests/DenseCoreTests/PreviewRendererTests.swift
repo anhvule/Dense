@@ -17,6 +17,7 @@ final class PreviewRendererTests: XCTestCase {
     }
 
     func testVideoPreviewProducesMatchingFramesAndEstimate() async throws {
+        try HardwareEncoder.skipUnlessAvailable()
         let pair = try await makeRenderer().videoPreview(
             input: fixtureURL("clip-2s.mp4"), options: .init(preset: .small))
         XCTAssertEqual(pair.original.width, 640)

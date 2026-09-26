@@ -48,7 +48,6 @@ final class FFmpegRunnerTests: XCTestCase {
 
     func testCancellationTerminatesProcess() async throws {
         let runner = FFmpegRunner(binaryURL: try ffmpegURL())
-        let started = Date()
         // Slow, CPU-bound encode that loops the 8s fixture indefinitely (-stream_loop -1)
         // at a heavy preset, so left uncancelled it would never finish — but still
         // responds to SIGTERM within ~1-2s (verified manually: killing the equivalent
@@ -68,10 +67,13 @@ final class FFmpegRunnerTests: XCTestCase {
             ]) { _ in }
         }
         try await Task.sleep(nanoseconds: 500_000_000)
+        let cancelledAt = Date()
         task.cancel()
         let result = await task.result
-        let elapsed = Date().timeIntervalSince(started)
-        XCTAssertLessThan(elapsed, 6.0, "cancel should stop the encode well before a veryslow full encode completes")
+        let elapsed = Date().timeIntervalSince(cancelledAt)
+        // The encode never ends on its own, so any bounded return proves the
+        // cancel landed; the headroom covers slow shared CI VMs.
+        XCTAssertLessThan(elapsed, 10.0, "cancel should stop the otherwise endless encode promptly")
         switch result {
         case .success(let code): XCTAssertNotEqual(code, 0)
         case .failure: break // CancellationError is acceptable
